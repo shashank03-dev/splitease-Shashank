@@ -95,6 +95,17 @@
   align-items: center;
 }
 
+.management-stack {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.card-block {
+  position: relative;
+  min-width: 0;
+}
+
 .intro {
   max-width: 500px;
   animation: rise 480ms ease both;
@@ -116,7 +127,7 @@
   letter-spacing: -0.05em;
 }
 
-.intro__title-serif {
+.intro__title-accent {
   display: flex;
   gap: 0.22em;
   align-items: baseline;
@@ -187,6 +198,10 @@
   }
 
   .group-card {
+    max-width: 700px;
+  }
+
+  .expense-card {
     max-width: 700px;
   }
 }

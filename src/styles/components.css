@@ -53,6 +53,73 @@
   opacity: 0.4;
 }
 
+/* ---------- Hand-drawn guidance ---------- */
+
+.hand-note {
+  position: absolute;
+  right: calc(100% + clamp(1rem, 2vw, 1.5rem));
+  z-index: 3;
+  width: clamp(11rem, 15vw, 14rem);
+  color: var(--color-primary);
+  text-align: right;
+  transform: rotate(-1.3deg);
+  transform-origin: right center;
+}
+
+.hand-note--group {
+  top: 0.65rem;
+}
+
+.hand-note--expenses {
+  bottom: 1.15rem;
+}
+
+.hand-note__kicker {
+  display: block;
+  font-size: 0.6rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.hand-note__copy {
+  margin-top: 0.22rem;
+  font-size: 0.76rem;
+  line-height: 1.45;
+  color: var(--color-ink-muted);
+  text-wrap: pretty;
+}
+
+.hand-note__arrow {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.hand-note__arrow--side {
+  position: absolute;
+  top: 2.1rem;
+  left: calc(100% + 0.25rem);
+  width: clamp(3rem, 3.6vw, 3.75rem);
+  height: auto;
+  overflow: visible;
+}
+
+.hand-note--expenses .hand-note__arrow--side {
+  top: 1.15rem;
+}
+
+.hand-note__arrow--down {
+  display: none;
+}
+
+.hand-note__stroke--echo {
+  opacity: 0.35;
+}
+
 /* ---------- Group card ---------- */
 
 .group-card {
@@ -184,6 +251,30 @@
   transition: none;
 }
 
+.select-wrap {
+  position: relative;
+}
+
+.select-input {
+  width: 100%;
+  padding-right: 2rem;
+  appearance: none;
+  cursor: pointer;
+}
+
+.select-input:disabled {
+  cursor: not-allowed;
+}
+
+.select-wrap__icon {
+  position: absolute;
+  top: 50%;
+  right: 0.7rem;
+  color: var(--color-ink-subtle);
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
 .member-form__meta {
   display: flex;
   gap: 0.75rem;
@@ -244,42 +335,7 @@
 }
 
 .member-list {
-  padding: 0.9rem 1.4rem 1.05rem;
-}
-
-.member-list__header {
-  display: flex;
-  gap: 1rem;
-  align-items: flex-start;
-  justify-content: space-between;
-  margin-bottom: 0.5rem;
-}
-
-.member-list__heading h3 {
-  font-size: 0.76rem;
-  font-weight: 600;
-  line-height: 1.4;
-}
-
-.member-list__note {
-  margin-top: 0.1rem;
-  font-size: 0.66rem;
-  line-height: 1.4;
-  color: var(--color-ink-subtle);
-}
-
-.member-list__count {
-  flex-shrink: 0;
-  font-size: 0.6rem;
-  line-height: 1.4;
-  letter-spacing: 0.06em;
-  color: var(--color-ink-subtle);
-  text-transform: uppercase;
-  font-variant-numeric: tabular-nums;
-}
-
-.member-list__items {
-  border-top: 1px solid var(--color-line);
+  padding: 0.45rem 1.4rem 0.9rem;
 }
 
 .member {
@@ -341,26 +397,173 @@
   outline-offset: 2px;
 }
 
-/* ---------- Empty state ---------- */
+/* ---------- Expense card ---------- */
 
-.empty-state {
-  padding: 0.85rem 0 0.2rem;
-  border-top: 1px solid var(--color-line);
+.expense-card {
+  overflow: hidden;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-lg);
+  animation: rise 480ms 120ms ease both;
 }
 
-.empty-state__title {
-  font-size: 0.78rem;
+.expense-card__header {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.15rem 1.4rem 0.85rem;
+}
+
+.expense-card__header h2 {
+  font-size: 1.3rem;
   font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
 }
 
-.empty-state__description {
-  margin-top: 0.1rem;
+.expense-card__aside {
+  display: flex;
+  flex-shrink: 0;
+  gap: 0.65rem;
+  align-items: center;
+}
+
+.expense-stat {
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  color: var(--color-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.expense-stat span {
+  margin-left: 0.2rem;
   font-size: 0.7rem;
-  line-height: 1.5;
+  font-weight: 400;
   color: var(--color-ink-subtle);
+  letter-spacing: 0;
+}
+
+.expense-form {
+  padding: 0.9rem 1.4rem 1.05rem;
+}
+
+.expense-form__grid {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1.7fr) minmax(88px, 0.7fr) minmax(0, 0.95fr)
+    auto;
+  gap: 0.5rem;
+  align-items: end;
+}
+
+.expense-form__field {
+  min-width: 0;
+}
+
+.expense-form__field .text-input {
+  width: 100%;
+}
+
+.expense-form__submit {
+  min-width: 64px;
+}
+
+.expense-form__meta {
+  margin-top: 0.45rem;
+}
+
+.expense-card__divider {
+  height: 1px;
+  margin-inline: 1.4rem;
+  background: var(--color-line);
+}
+
+.expense-list {
+  padding: 0.45rem 1.4rem 0.9rem;
+}
+
+.expense {
+  display: flex;
+  gap: 0.65rem;
+  align-items: center;
+  padding-block: 0.55rem;
+  border-bottom: 1px solid var(--color-line);
+}
+
+.expense:last-child {
+  border-bottom: 0;
+}
+
+.expense__details {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  gap: 1px;
+}
+
+.expense__description {
+  overflow: hidden;
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.expense__payer {
+  overflow: hidden;
+  font-size: 0.66rem;
+  line-height: 1.4;
+  color: var(--color-ink-subtle);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.expense__amount {
+  flex-shrink: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ---------- Responsive ---------- */
+
+@media (max-width: 1000px) {
+  .hand-note {
+    position: relative;
+    right: auto;
+    bottom: auto;
+    width: 100%;
+    max-width: 32rem;
+    margin-bottom: 0.55rem;
+    text-align: left;
+    transform: none;
+  }
+
+  .hand-note--group {
+    top: auto;
+  }
+
+  .hand-note--expenses {
+    bottom: auto;
+  }
+
+  .hand-note__arrow--side {
+    display: none;
+  }
+
+  .hand-note__arrow--down {
+    display: block;
+    width: 2.25rem;
+    height: auto;
+    margin-top: 0.2rem;
+    margin-right: 1.5rem;
+    margin-left: auto;
+  }
+}
 
 @media (max-width: 640px) {
   .group-card__header {
@@ -380,7 +583,38 @@
   }
 
   .member-list {
+    padding: 0.4rem 1.15rem 0.85rem;
+  }
+
+  .expense-card__header {
+    padding: 1rem 1.15rem 0.75rem;
+  }
+
+  .expense-form {
     padding: 0.8rem 1.15rem 0.95rem;
+  }
+
+  .expense-card__divider {
+    margin-inline: 1.15rem;
+  }
+
+  .expense-list {
+    padding: 0.4rem 1.15rem 0.85rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .expense-form__grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 0.85fr);
+  }
+
+  .expense-form__field--description {
+    grid-column: 1 / -1;
+  }
+
+  .expense-form__submit {
+    grid-column: 1 / -1;
+    width: 100%;
   }
 }
 
@@ -399,15 +633,28 @@
 }
 
 @media (max-width: 480px) {
-  .group-card__header {
+  .group-card__header,
+  .expense-card__header {
     flex-direction: column;
     gap: 0.85rem;
     align-items: flex-start;
   }
 
-  .group-card__aside {
+  .group-card__aside,
+  .expense-card__aside {
     justify-content: space-between;
     width: 100%;
+  }
+}
+
+@media (max-width: 440px) {
+  .expense-form__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .expense-form__field--description,
+  .expense-form__submit {
+    grid-column: auto;
   }
 }
 

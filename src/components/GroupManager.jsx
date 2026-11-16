@@ -59,9 +59,12 @@ export default function GroupManager({
         onClearError={onClearError}
       />
 
-      <div className="group-card__divider" />
-
-      <MemberList members={members} onRemoveMember={onRemoveMember} />
+      {members.length > 0 ? (
+        <>
+          <div className="group-card__divider" />
+          <MemberList members={members} onRemoveMember={onRemoveMember} />
+        </>
+      ) : null}
     </section>
   )
 }
