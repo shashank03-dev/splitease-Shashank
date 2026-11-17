@@ -99,6 +99,29 @@ export function validateExpense(
   }
 }
 
+/**
+ * Converts a rupee amount to integer paise.
+ *
+ * Money is stored as decimal rupees, but arithmetic is done in paise so
+ * values such as 0.1 + 0.2 never inherit binary floating-point drift.
+ */
+export function toPaise(amount) {
+  const numericAmount = Number(amount)
+
+  if (!Number.isFinite(numericAmount)) {
+    return 0
+  }
+
+  return Math.round(numericAmount * 100)
+}
+
+export function formatPaise(paise) {
+  const numericPaise = Number(paise)
+  const safePaise = Number.isFinite(numericPaise) ? numericPaise : 0
+
+  return amountFormatter.format(safePaise / 100)
+}
+
 export function formatExpenseAmount(amount) {
-  return amountFormatter.format(amount)
+  return formatPaise(toPaise(amount))
 }

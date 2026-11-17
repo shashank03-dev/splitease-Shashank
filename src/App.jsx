@@ -44,8 +44,8 @@ export default function App() {
   } else {
     guide = {
       target: 'expenses',
-      kicker: 'Newest first',
-      copy: 'Refreshing clears the board.',
+      kicker: 'Live totals',
+      copy: 'Every entry updates the split below.',
     }
   }
 

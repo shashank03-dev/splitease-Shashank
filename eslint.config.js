@@ -26,4 +26,10 @@ export default defineConfig([
       'no-console': ['warn', { allow: ['warn', 'error'] }],
     },
   },
+  {
+    files: ['tests/**/*.js'],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
 ])
