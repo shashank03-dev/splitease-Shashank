@@ -6,11 +6,11 @@ import { createMemberId } from '../utils/id'
  * Owns all group-member state and rules.
  *
  * Keeping this logic in one custom hook means the UI components stay
- * presentational, and future features (expenses, persistence) can read
- * the same member list without duplicating validation.
+ * presentational, and the expense and persistence layers can read the same
+ * validated member list without duplicating rules.
  */
-export function useGroupMembers() {
-  const [members, setMembers] = useState([])
+export function useGroupMembers(initialMembers = []) {
+  const [members, setMembers] = useState(initialMembers)
   const [error, setError] = useState('')
 
   const addMember = useCallback(

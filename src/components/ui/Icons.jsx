@@ -69,10 +69,65 @@ export function AlertCircleIcon(props) {
   )
 }
 
+export function CheckIcon(props) {
+  return (
+    <SvgIcon {...props}>
+      <path d="m5 12.5 4.2 4L19 6.5" />
+    </SvgIcon>
+  )
+}
+
 export function ChevronDownIcon(props) {
   return (
     <SvgIcon {...props}>
       <path d="m6 9 6 6 6-6" />
+    </SvgIcon>
+  )
+}
+
+export function XIcon(props) {
+  return (
+    <SvgIcon {...props}>
+      <path d="M6 6l12 12M18 6 6 18" />
+    </SvgIcon>
+  )
+}
+
+export function InfoIcon(props) {
+  return (
+    <SvgIcon {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 11v5" />
+      <path d="M12 7.5h.01" />
+    </SvgIcon>
+  )
+}
+
+export function LockIcon(props) {
+  return (
+    <SvgIcon {...props}>
+      <rect x="5" y="10" width="14" height="10" rx="2" />
+      <path d="M8 10V7.5a4 4 0 0 1 8 0V10" />
+    </SvgIcon>
+  )
+}
+
+export function UsersIcon(props) {
+  return (
+    <SvgIcon {...props}>
+      <path d="M16 20v-1.5a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4V20" />
+      <circle cx="9" cy="7" r="3.2" />
+      <path d="M18 20v-1.5a4 4 0 0 0-3-3.87" />
+      <path d="M15.5 4.2a3.2 3.2 0 0 1 0 5.6" />
+    </SvgIcon>
+  )
+}
+
+export function ReceiptIcon(props) {
+  return (
+    <SvgIcon {...props}>
+      <path d="M6 3h12a1 1 0 0 1 1 1v17l-3-2-2 2-2-2-2 2-2-2-3 2V4a1 1 0 0 1 1-1Z" />
+      <path d="M9 8h6M9 12h6" />
     </SvgIcon>
   )
 }

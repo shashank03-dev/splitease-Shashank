@@ -7,7 +7,7 @@
 html {
   -webkit-text-size-adjust: 100%;
   scroll-behavior: smooth;
-  scroll-padding-top: 1.25rem;
+  scroll-padding-top: 1.5rem;
 }
 
 body {
@@ -36,9 +36,14 @@ body {
 h1,
 h2,
 h3,
-h4,
+h4 {
+  margin: 0;
+  text-wrap: balance;
+}
+
 p {
   margin: 0;
+  text-wrap: pretty;
 }
 
 ul,
@@ -50,7 +55,8 @@ ol {
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 
@@ -60,10 +66,12 @@ button {
   background: none;
   border: 0;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
 a {
   color: inherit;
+  text-underline-offset: 0.18em;
 }
 
 img,
@@ -82,7 +90,7 @@ svg {
 }
 
 .container {
-  width: min(100% - 3rem, var(--container-width));
+  width: min(100% - clamp(2rem, 5vw, 4rem), var(--container-width));
   margin-inline: auto;
 }
 
@@ -113,14 +121,9 @@ svg {
   transition: transform var(--transition-fast);
 }
 
-.skip-link:focus {
+.skip-link:focus-visible {
+  outline-color: var(--color-white);
   transform: translateY(0);
-}
-
-@media (max-width: 640px) {
-  .container {
-    width: min(100% - 2rem, var(--container-width));
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

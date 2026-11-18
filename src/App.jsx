@@ -1,11 +1,29 @@
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 import ExpenseManager from './components/ExpenseManager'
 import GroupManager from './components/GroupManager'
 import Header from './components/Header'
+import StorageNotice from './components/StorageNotice'
 import HandNote from './components/ui/HandNote'
+import { AlertCircleIcon, LockIcon } from './components/ui/Icons'
 import { useExpenses } from './hooks/useExpenses'
 import { useGroupMembers } from './hooks/useGroupMembers'
+import {
+  dismissStorageStatusMessage,
+  getStorageStatus,
+  readSplitState,
+  subscribeToStorageStatus,
+  writeSplitState,
+} from './utils/storage'
 
 export default function App() {
+  const [initialState] = useState(() => readSplitState())
+  const [loadNotice, setLoadNotice] = useState(initialState.notice)
+  const saveStatus = useSyncExternalStore(
+    subscribeToStorageStatus,
+    getStorageStatus,
+    getStorageStatus,
+  )
+
   const {
     members,
     error,
@@ -14,10 +32,66 @@ export default function App() {
     clearError,
     isAtLimit,
     remainingSlots,
-  } = useGroupMembers()
+  } = useGroupMembers(initialState.members)
 
-  const { expenses, canAddExpense, addExpense } = useExpenses(members)
+  const { expenses, canAddExpense, addExpense, removeExpense } = useExpenses(
+    members,
+    initialState.expenses,
+  )
 
+  /**
+   * Persistence is a side effect, not part of rendering. This runs after React
+   * has committed every member or expense change, so storage always receives
+   * the same arrays the screen is showing. Save failures are published through
+   * the storage status store instead of scheduling React state from this effect.
+   */
+  useEffect(() => {
+    writeSplitState({ members, expenses })
+  }, [members, expenses])
+
+  const expenseCountsByMember = new Map()
+
+  expenses.forEach((expense) => {
+    expenseCountsByMember.set(
+      expense.payerId,
+      (expenseCountsByMember.get(expense.payerId) ?? 0) + 1,
+    )
+  })
+
+  /**
+   * Referential integrity: an expense must always point at a current member.
+   * Blocking removal is safer than silently deleting financial history.
+   */
+  const handleRemoveMember = useCallback(
+    (memberId) => {
+      const member = members.find((entry) => entry.id === memberId)
+
+      if (!member) {
+        return { ok: false }
+      }
+
+      const linkedExpenseCount = expenses.filter(
+        (expense) => expense.payerId === memberId,
+      ).length
+
+      if (linkedExpenseCount > 0) {
+        return { ok: false, code: 'linked-expenses' }
+      }
+
+      removeMember(memberId)
+      return { ok: true }
+    },
+    [expenses, members, removeMember],
+  )
+
+  function handleDismissNotice() {
+    dismissStorageStatusMessage()
+    setLoadNotice('')
+  }
+
+  const storageAvailable = initialState.storageAvailable && saveStatus.available
+  const noticeMessage = saveStatus.message || loadNotice
+  const noticeTone = saveStatus.message ? 'danger' : 'info'
   const memberCount = members.length
   const hasExpenses = expenses.length > 0
 
@@ -45,7 +119,7 @@ export default function App() {
     guide = {
       target: 'expenses',
       kicker: 'Live totals',
-      copy: 'Every entry updates the split below.',
+      copy: 'Delete any entry and every total updates instantly.',
     }
   }
 
@@ -57,7 +131,13 @@ export default function App() {
 
       <Header />
 
-      <main className="container main">
+      <main className="container main" id="main-content">
+        <StorageNotice
+          message={noticeMessage}
+          tone={noticeTone}
+          onDismiss={handleDismissNotice}
+        />
+
         <div className="intro-grid">
           <section className="intro" id="rules" aria-labelledby="page-heading">
             <h1 className="intro__title" id="page-heading">
@@ -88,11 +168,12 @@ export default function App() {
 
               <GroupManager
                 members={members}
+                expenseCountsByMember={expenseCountsByMember}
                 error={error}
                 isAtLimit={isAtLimit}
                 remainingSlots={remainingSlots}
                 onAddMember={addMember}
-                onRemoveMember={removeMember}
+                onRemoveMember={handleRemoveMember}
                 onClearError={clearError}
               />
             </div>
@@ -112,11 +193,32 @@ export default function App() {
                 expenses={expenses}
                 canAddExpense={canAddExpense}
                 onAddExpense={addExpense}
+                onDeleteExpense={removeExpense}
               />
             </div>
           </div>
         </div>
       </main>
+
+      <footer className="site-footer">
+        <div className="container site-footer__inner">
+          <p
+            className={`site-footer__note${
+              storageAvailable ? '' : ' site-footer__note--danger'
+            }`}
+          >
+            {storageAvailable ? (
+              <LockIcon size={14} />
+            ) : (
+              <AlertCircleIcon size={14} />
+            )}
+            {storageAvailable
+              ? 'Saved locally in this browser — no account, no server.'
+              : 'Changes are not being saved in this browser.'}
+          </p>
+          <p className="site-footer__meta">SplitEasy · equal splits, clearly.</p>
+        </div>
+      </footer>
     </div>
   )
 }

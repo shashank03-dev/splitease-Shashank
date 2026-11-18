@@ -1,16 +1,56 @@
-import { calculateGroupBalances } from '../utils/balanceUtils'
+import { useEffect, useState } from 'react'
+import {
+  calculateGroupBalances,
+  calculateSettlements,
+} from '../utils/balanceUtils'
+import { formatExpenseAmount } from '../utils/expenseUtils'
 import ExpenseForm from './ExpenseForm'
 import ExpenseList from './ExpenseList'
 import ExpenseSummary from './ExpenseSummary'
 import MemberBalances from './MemberBalances'
+import SettlementPlan from './SettlementPlan'
 
 export default function ExpenseManager({
   members,
   expenses,
   canAddExpense,
   onAddExpense,
+  onDeleteExpense,
 }) {
+  const [feedback, setFeedback] = useState('')
   const summary = calculateGroupBalances(members, expenses)
+  const settlements = calculateSettlements(summary.balances)
+  const showSettlementPlan = summary.canSplit && summary.expenseCount > 0
+  const showExpenseLog = members.length > 0 || expenses.length > 0
+
+  useEffect(() => {
+    if (!feedback) {
+      return undefined
+    }
+
+    const timer = window.setTimeout(() => setFeedback(''), 5000)
+
+    return () => window.clearTimeout(timer)
+  }, [feedback])
+
+  function handleAddExpense(input) {
+    const result = onAddExpense(input)
+
+    if (result.ok) {
+      setFeedback('')
+    }
+
+    return result
+  }
+
+  function handleDeleteExpense(expense) {
+    onDeleteExpense(expense.id)
+    setFeedback(
+      `Deleted “${expense.description}” (${formatExpenseAmount(
+        expense.amount,
+      )}).`,
+    )
+  }
 
   return (
     <section
@@ -18,12 +58,15 @@ export default function ExpenseManager({
       id="expenses"
       aria-labelledby="expenses-heading"
     >
-      <div className="expense-card__header">
-        <h2 id="expenses-heading">Expenses</h2>
+      <div className="card-header">
+        <div className="card-header__titles">
+          <span className="card-header__step">Step 2</span>
+          <h2 id="expenses-heading">Expenses</h2>
+        </div>
 
-        <div className="expense-card__aside">
+        <div className="card-header__aside">
           <span
-            className="expense-stat"
+            className="card-stat"
             aria-live="polite"
             aria-atomic="true"
           >
@@ -39,29 +82,44 @@ export default function ExpenseManager({
       <ExpenseForm
         members={members}
         canAddExpense={canAddExpense}
-        onAddExpense={onAddExpense}
+        onAddExpense={handleAddExpense}
       />
 
-      <div className="expense-card__divider" />
+      <div className="card-divider" />
 
       <ExpenseSummary summary={summary} />
 
       {summary.canSplit ? (
         <>
-          <div className="expense-card__divider" />
+          <div className="card-divider" />
           <MemberBalances
             balances={summary.balances}
             memberCount={summary.memberCount}
           />
+
+          {showSettlementPlan ? (
+            <>
+              <div className="card-divider" />
+              <SettlementPlan settlements={settlements} />
+            </>
+          ) : null}
         </>
       ) : null}
 
-      {expenses.length > 0 ? (
+      {showExpenseLog ? (
         <>
-          <div className="expense-card__divider" />
-          <ExpenseList expenses={expenses} />
+          <div className="card-divider" />
+          <ExpenseList
+            expenses={expenses}
+            canAddExpense={canAddExpense}
+            onDeleteExpense={handleDeleteExpense}
+          />
         </>
       ) : null}
+
+      <p className="action-status" role="status" aria-live="polite">
+        {feedback}
+      </p>
     </section>
   )
 }

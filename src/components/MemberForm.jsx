@@ -7,11 +7,13 @@ export default function MemberForm({
   error,
   isAtLimit,
   remainingSlots,
+  inputRef,
   onAddMember,
   onClearError,
 }) {
   const [name, setName] = useState('')
-  const inputRef = useRef(null)
+  const localInputRef = useRef(null)
+  const nameInputRef = inputRef ?? localInputRef
   const inputId = useId()
   const hintId = useId()
   const errorId = useId()
@@ -36,8 +38,10 @@ export default function MemberForm({
       setName('')
 
       if (memberCount + 1 < MAX_GROUP_SIZE) {
-        inputRef.current?.focus()
+        nameInputRef.current?.focus()
       }
+    } else {
+      nameInputRef.current?.focus()
     }
   }
 
@@ -49,7 +53,7 @@ export default function MemberForm({
 
       <div className="member-form__row">
         <input
-          ref={inputRef}
+          ref={nameInputRef}
           id={inputId}
           className={`text-input${error ? ' text-input--error' : ''}`}
           type="text"
@@ -58,8 +62,12 @@ export default function MemberForm({
           onChange={handleChange}
           placeholder={isFull ? 'Group is full' : 'e.g. Aman, Riya'}
           autoComplete="off"
+          autoCapitalize="words"
+          spellCheck="false"
           maxLength={MAX_NAME_LENGTH}
+          required
           disabled={isFull}
+          aria-required="true"
           aria-invalid={Boolean(error)}
           aria-describedby={describedBy}
         />

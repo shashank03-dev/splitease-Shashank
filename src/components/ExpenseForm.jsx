@@ -17,6 +17,8 @@ export default function ExpenseForm({
   const [error, setError] = useState(null)
 
   const descriptionRef = useRef(null)
+  const amountRef = useRef(null)
+  const payerRef = useRef(null)
   const descriptionId = useId()
   const amountId = useId()
   const payerFieldId = useId()
@@ -31,6 +33,20 @@ export default function ExpenseForm({
     if (error) {
       setError(null)
     }
+  }
+
+  function focusField(field) {
+    if (field === 'amount') {
+      amountRef.current?.focus()
+      return
+    }
+
+    if (field === 'payerId') {
+      payerRef.current?.focus()
+      return
+    }
+
+    descriptionRef.current?.focus()
   }
 
   function handleSubmit(event) {
@@ -59,6 +75,7 @@ export default function ExpenseForm({
       field: result.field ?? 'form',
       message: result.message,
     })
+    focusField(result.field)
   }
 
   const errorIdFor = (field) => (error?.field === field ? errorId : undefined)
@@ -88,7 +105,9 @@ export default function ExpenseForm({
             placeholder="e.g. Dinner"
             autoComplete="off"
             maxLength={MAX_EXPENSE_DESCRIPTION_LENGTH}
+            required
             disabled={!canAddExpense}
+            aria-required="true"
             aria-invalid={error?.field === 'description' || undefined}
             aria-describedby={errorIdFor('description')}
           />
@@ -99,6 +118,7 @@ export default function ExpenseForm({
             Amount (₹)
           </label>
           <input
+            ref={amountRef}
             id={amountId}
             className={`text-input${
               error?.field === 'amount' ? ' text-input--error' : ''
@@ -113,7 +133,9 @@ export default function ExpenseForm({
             placeholder="0.00"
             inputMode="decimal"
             autoComplete="off"
+            required
             disabled={!canAddExpense}
+            aria-required="true"
             aria-invalid={error?.field === 'amount' || undefined}
             aria-describedby={amountDescribedBy}
           />
@@ -125,6 +147,7 @@ export default function ExpenseForm({
           </label>
           <div className="select-wrap">
             <select
+              ref={payerRef}
               id={payerFieldId}
               className={`text-input select-input${
                 error?.field === 'payerId' ? ' text-input--error' : ''
@@ -135,7 +158,9 @@ export default function ExpenseForm({
                 setPayerId(event.target.value)
                 clearError()
               }}
+              required
               disabled={!canAddExpense}
+              aria-required="true"
               aria-invalid={error?.field === 'payerId' || undefined}
               aria-describedby={errorIdFor('payerId')}
             >

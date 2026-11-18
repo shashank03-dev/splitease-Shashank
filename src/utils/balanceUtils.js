@@ -137,6 +137,84 @@ export function calculateMemberBalances(members = [], expenses = []) {
 }
 
 /**
+ * Turns positive and negative balances into a short list of payments.
+ *
+ * Each settlement moves real money from someone who owes to someone who is
+ * owed. Pairing the largest balances first clears at least one member per
+ * payment and keeps the number of arrows small. All arithmetic stays in
+ * integer paise, so the payments add up exactly even when equal shares
+ * include a remainder.
+ */
+export function calculateSettlements(balances = []) {
+  const debtors = []
+  const creditors = []
+
+  balances.forEach((balance, index) => {
+    const balancePaise = Math.round(balance?.balancePaise ?? 0)
+
+    if (!Number.isFinite(balancePaise) || balancePaise === 0) {
+      return
+    }
+
+    const entry = {
+      memberId: balance.memberId,
+      name: balance.name,
+      remainingPaise: Math.abs(balancePaise),
+      index,
+    }
+
+    if (balancePaise < 0) {
+      debtors.push(entry)
+    } else {
+      creditors.push(entry)
+    }
+  })
+
+  const largestFirst = (left, right) =>
+    right.remainingPaise - left.remainingPaise || left.index - right.index
+
+  debtors.sort(largestFirst)
+  creditors.sort(largestFirst)
+
+  const settlements = []
+  let debtorIndex = 0
+  let creditorIndex = 0
+
+  while (
+    debtorIndex < debtors.length &&
+    creditorIndex < creditors.length
+  ) {
+    const debtor = debtors[debtorIndex]
+    const creditor = creditors[creditorIndex]
+    const amountPaise = Math.min(
+      debtor.remainingPaise,
+      creditor.remainingPaise,
+    )
+
+    settlements.push({
+      fromId: debtor.memberId,
+      fromName: debtor.name,
+      toId: creditor.memberId,
+      toName: creditor.name,
+      amountPaise,
+    })
+
+    debtor.remainingPaise -= amountPaise
+    creditor.remainingPaise -= amountPaise
+
+    if (debtor.remainingPaise === 0) {
+      debtorIndex += 1
+    }
+
+    if (creditor.remainingPaise === 0) {
+      creditorIndex += 1
+    }
+  }
+
+  return settlements
+}
+
+/**
  * The single derived object consumed by the summary and balance components.
  * Nothing in here is stored in React state; it is rebuilt from the current
  * member and expense arrays on every render.

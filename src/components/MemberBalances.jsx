@@ -9,6 +9,12 @@ const STATUS_LABELS = {
   [BALANCE_STATUS.SETTLED]: 'Settled',
 }
 
+const STATUS_MARKERS = {
+  [BALANCE_STATUS.OWED]: '+',
+  [BALANCE_STATUS.OWES]: '−',
+  [BALANCE_STATUS.SETTLED]: '=',
+}
+
 export default function MemberBalances({ balances, memberCount }) {
   const headingId = useId()
 
@@ -34,7 +40,8 @@ export default function MemberBalances({ balances, memberCount }) {
             <span className="balance__person">
               <span className="balance__name">{balance.name}</span>
               <span className="balance__contribution">
-                Paid {formatPaise(balance.contributionPaise)}
+                Paid {formatPaise(balance.contributionPaise)} · share{' '}
+                {formatPaise(balance.sharePaise)}
               </span>
             </span>
 
@@ -43,6 +50,9 @@ export default function MemberBalances({ balances, memberCount }) {
                 {STATUS_LABELS[balance.status]}
               </span>
               <span className="balance__amount">
+                <span className="balance__marker" aria-hidden="true">
+                  {STATUS_MARKERS[balance.status]}
+                </span>
                 {formatPaise(Math.abs(balance.balancePaise))}
               </span>
             </span>
@@ -51,7 +61,8 @@ export default function MemberBalances({ balances, memberCount }) {
       </ul>
 
       <p className="balance-legend">
-        Balance = total paid − equal share.
+        Balance = total paid − equal share. Plus is owed, minus owes, equals
+        settled.
       </p>
     </section>
   )

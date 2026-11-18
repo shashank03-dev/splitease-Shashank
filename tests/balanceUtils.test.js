@@ -6,6 +6,7 @@ import {
   calculateGroupBalances,
   calculateMemberBalances,
   calculateMemberContributions,
+  calculateSettlements,
   calculateTotalExpenditure,
   getBalanceStatus,
 } from '../src/utils/balanceUtils.js'
@@ -351,4 +352,238 @@ test('returns one balance row per current member', () => {
     balances.map(({ memberId, name }) => ({ memberId, name })),
     members.map(({ id, name }) => ({ memberId: id, name })),
   )
+})
+
+test('supports the minimum two-person group', () => {
+  const twoMembers = members.slice(0, 2)
+  const group = calculateGroupBalances(twoMembers, [
+    makeExpense('e1', 100, 'aman'),
+  ])
+
+  assert.equal(group.canSplit, true)
+  assert.equal(group.memberCount, 2)
+  assert.equal(group.equalShare.basePaise, 5000)
+  assert.deepEqual(
+    group.balances.map(({ name, balancePaise, status }) => ({
+      name,
+      balancePaise,
+      status,
+    })),
+    [
+      {
+        name: 'Aman',
+        balancePaise: 5000,
+        status: BALANCE_STATUS.OWED,
+      },
+      {
+        name: 'Riya',
+        balancePaise: -5000,
+        status: BALANCE_STATUS.OWES,
+      },
+    ],
+  )
+})
+
+test('splits across the maximum six-person group without losing paise', () => {
+  const sixMembers = Array.from({ length: 6 }, (_, index) => ({
+    id: `m${index}`,
+    name: `Person ${index}`,
+  }))
+  const group = calculateGroupBalances(sixMembers, [
+    {
+      id: 'e1',
+      description: 'Shared cab',
+      amount: 100,
+      payerId: 'm0',
+      payerName: 'Person 0',
+    },
+  ])
+
+  assert.equal(group.memberCount, 6)
+  assert.equal(group.totalPaise, 10000)
+  assert.equal(group.equalShare.basePaise, 1666)
+  assert.equal(group.equalShare.remainderPaise, 4)
+  assert.equal(
+    group.balances.reduce((sum, balance) => sum + balance.balancePaise, 0),
+    0,
+  )
+  assert.deepEqual(
+    group.balances.map(({ sharePaise }) => sharePaise),
+    [1667, 1667, 1667, 1667, 1666, 1666],
+  )
+})
+
+test('recalculates totals, shares, and balances when an expense is deleted', () => {
+  const allExpenses = [
+    makeExpense('e1', 900, 'aman', 'Dinner'),
+    makeExpense('e2', 300, 'riya', 'Snacks'),
+  ]
+  const before = calculateGroupBalances(members, allExpenses)
+  const after = calculateGroupBalances(
+    members,
+    allExpenses.filter((expense) => expense.id !== 'e1'),
+  )
+
+  assert.equal(before.totalPaise, 120000)
+  assert.equal(before.equalShare.basePaise, 40000)
+  assert.equal(before.expenseCount, 2)
+
+  assert.equal(after.totalPaise, 30000)
+  assert.equal(after.equalShare.basePaise, 10000)
+  assert.equal(after.expenseCount, 1)
+  assert.deepEqual(
+    after.balances.map(({ name, balancePaise, status }) => ({
+      name,
+      balancePaise,
+      status,
+    })),
+    [
+      {
+        name: 'Aman',
+        balancePaise: -10000,
+        status: BALANCE_STATUS.OWES,
+      },
+      {
+        name: 'Riya',
+        balancePaise: 20000,
+        status: BALANCE_STATUS.OWED,
+      },
+      {
+        name: 'Karan',
+        balancePaise: -10000,
+        status: BALANCE_STATUS.OWES,
+      },
+    ],
+  )
+  assert.equal(
+    after.balances.reduce((sum, balance) => sum + balance.balancePaise, 0),
+    0,
+  )
+})
+
+test('returns to an all-settled state when the final expense is deleted', () => {
+  const before = calculateGroupBalances(members, [
+    makeExpense('e1', 900, 'aman'),
+  ])
+  const after = calculateGroupBalances(members, [])
+
+  assert.equal(before.balances.length, 3)
+  assert.equal(after.totalPaise, 0)
+  assert.equal(after.expenseCount, 0)
+  assert.deepEqual(
+    after.balances.map(({ balancePaise, status }) => ({
+      balancePaise,
+      status,
+    })),
+    members.map(() => ({
+      balancePaise: 0,
+      status: BALANCE_STATUS.SETTLED,
+    })),
+  )
+})
+
+test('builds one settlement per debtor and creditor', () => {
+  const group = calculateGroupBalances(members, [
+    makeExpense('e1', 3234, 'aman', 'Repair'),
+    makeExpense('e2', 1233, 'riya', 'Car'),
+    makeExpense('e3', 321, 'karan', 'Stark end'),
+  ])
+
+  assert.deepEqual(calculateSettlements(group.balances), [
+    {
+      fromId: 'karan',
+      fromName: 'Karan',
+      toId: 'aman',
+      toName: 'Aman',
+      amountPaise: 127500,
+    },
+    {
+      fromId: 'riya',
+      fromName: 'Riya',
+      toId: 'aman',
+      toName: 'Aman',
+      amountPaise: 36300,
+    },
+  ])
+})
+
+test('gives a debtor one arrow per person they owe', () => {
+  const settlements = calculateSettlements([
+    { memberId: 'a', name: 'A', balancePaise: -10000 },
+    { memberId: 'b', name: 'B', balancePaise: 4000 },
+    { memberId: 'c', name: 'C', balancePaise: 6000 },
+  ])
+
+  assert.deepEqual(settlements, [
+    {
+      fromId: 'a',
+      fromName: 'A',
+      toId: 'c',
+      toName: 'C',
+      amountPaise: 6000,
+    },
+    {
+      fromId: 'a',
+      fromName: 'A',
+      toId: 'b',
+      toName: 'B',
+      amountPaise: 4000,
+    },
+  ])
+})
+
+test('pairs the largest balances first to avoid unnecessary payments', () => {
+  const settlements = calculateSettlements([
+    { memberId: 'a', name: 'A', balancePaise: -6000 },
+    { memberId: 'b', name: 'B', balancePaise: -4000 },
+    { memberId: 'c', name: 'C', balancePaise: 4000 },
+    { memberId: 'd', name: 'D', balancePaise: 6000 },
+  ])
+
+  assert.deepEqual(
+    settlements.map(({ fromId, toId, amountPaise }) => ({
+      fromId,
+      toId,
+      amountPaise,
+    })),
+    [
+      { fromId: 'a', toId: 'd', amountPaise: 6000 },
+      { fromId: 'b', toId: 'c', amountPaise: 4000 },
+    ],
+  )
+})
+
+test('keeps settlement amounts exact when shares include odd paise', () => {
+  const group = calculateGroupBalances(members, [
+    makeExpense('e1', 100, 'aman'),
+  ])
+  const settlements = calculateSettlements(group.balances)
+
+  assert.equal(settlements.length, 2)
+  assert.equal(
+    settlements.reduce((total, settlement) => total + settlement.amountPaise, 0),
+    6666,
+  )
+  assert.deepEqual(
+    settlements.map(({ fromId, toId, amountPaise }) => ({
+      fromId,
+      toId,
+      amountPaise,
+    })),
+    [
+      { fromId: 'riya', toId: 'aman', amountPaise: 3333 },
+      { fromId: 'karan', toId: 'aman', amountPaise: 3333 },
+    ],
+  )
+})
+
+test('returns no settlements when every balance is zero', () => {
+  assert.deepEqual(
+    calculateSettlements([
+      { memberId: 'a', name: 'A', balancePaise: 0 },
+      { memberId: 'b', name: 'B', balancePaise: 0 },
+    ]),
+    [],
+  )
+  assert.deepEqual(calculateSettlements([]), [])
 })

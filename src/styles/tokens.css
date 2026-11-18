@@ -7,24 +7,26 @@
 
   /* Colour palette: smoked off-white, near-black ink, one rust accent */
   --color-canvas: #ecebe7;
-  --color-canvas-light: #f6f5f2;
-  --color-canvas-deep: #e4e3df;
-  --color-surface: #fdfcfa;
-  --color-surface-soft: #f5f4f1;
-  --color-surface-strong: #e7e5e1;
-  --color-ink: #171513;
-  --color-ink-muted: #56534d;
-  --color-ink-subtle: #6a665f;
-  --color-line: #d9d6d0;
-  --color-line-strong: #c5c2bb;
+  --color-canvas-light: #f7f6f2;
+  --color-canvas-deep: #e3e1db;
+  --color-surface: #fffefa;
+  --color-surface-soft: #f6f4ef;
+  --color-surface-strong: #eae7e0;
+  --color-ink: #181613;
+  --color-ink-muted: #55514a;
+  --color-ink-subtle: #67625a;
+  --color-line: #dedad2;
+  --color-line-strong: #c9c4ba;
   --color-primary: #b33f22;
-  --color-primary-strong: #8c2f17;
-  --color-primary-ink: #742610;
-  --color-primary-soft: #f3e4dd;
+  --color-primary-strong: #8d2f17;
+  --color-primary-ink: #772711;
+  --color-primary-soft: #f5e6df;
   --color-positive: #2f6b46;
+  --color-positive-strong: #245337;
   --color-positive-soft: #e7efe9;
   --color-danger: #9d2f23;
-  --color-danger-soft: #f6e6e2;
+  --color-danger-strong: #7e2118;
+  --color-danger-soft: #f7e7e3;
   --color-white: #ffffff;
 
   /* Spacing scale */
@@ -42,18 +44,24 @@
 
   /* Radii */
   --radius-xs: 6px;
-  --radius-sm: 8px;
+  --radius-sm: 9px;
   --radius-md: 12px;
-  --radius-lg: 16px;
+  --radius-lg: 18px;
   --radius-xl: 24px;
   --radius-pill: 999px;
 
-  /* Focus */
-  --shadow-focus: 0 0 0 3px rgb(179 63 34 / 14%);
-  --shadow-focus-danger: 0 0 0 3px rgb(157 47 35 / 12%);
+  /* Elevation and focus */
+  --shadow-card:
+    0 1px 0 rgb(24 22 19 / 3%),
+    0 22px 48px -38px rgb(24 22 19 / 48%);
+  --shadow-raised:
+    0 1px 2px rgb(24 22 19 / 6%),
+    0 8px 18px -12px rgb(24 22 19 / 26%);
+  --shadow-focus: 0 0 0 4px rgb(179 63 34 / 18%);
+  --shadow-focus-danger: 0 0 0 4px rgb(157 47 35 / 16%);
 
   /* Layout */
-  --container-width: 1320px;
+  --container-width: 1280px;
   --header-height: 68px;
 
   /* Motion */
