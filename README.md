@@ -1,99 +1,233 @@
 # SplitEasy
 
-A frontend-only shared expense app for small groups, built for the **CodGen MERN Full Stack internship**.
+A frontend-only shared expense manager for friends, flatmates, and travel groups. Built for the **CodGen MERN Full Stack internship, Week 1**.
 
-Add 2–6 group members, log who paid for what, and see each person's equal share and net balance in INR.
+- **Repository:** [github.com/shashank03-dev/splitease-Shashank](https://github.com/shashank03-dev/splitease-Shashank)
+- **Live application:** Pending final deployment approval
 
-## Features
+## Overview
 
-- Add and remove 2–6 group members
-- Log expenses with description, amount, and payer
-- Delete any expense, with totals, shares, and balances recalculated immediately
-- Calculate total spend, equal share, and per-member contributions
-- Show who is owed, who owes, and who is settled, with visible `+`, `−`, and `=` markers
-- Draw an animated “Who pays whom” arrow for every suggested payment, including multiple arrows when one person owes several people
-- Save members and expenses in the browser and restore them after a refresh
-- Recover safely from missing, unreadable, or edited saved data
-- Keep member–expense relationships consistent by blocking removal of a member who paid for an expense
-- INR formatting with exact paise-based arithmetic
-- Safe empty, decimal, and insufficient-member states
-- Responsive, accessible UI with visible keyboard focus and labelled controls
+SplitEasy replaces manual shared-expense arithmetic with a focused, browser-based workflow. A group of 2–6 people can add themselves, log who paid for what, see each person's equal share and net balance, delete mistakes, and follow a clear “Who pays whom” settlement plan.
 
-## Tech stack
+The app works without an account or backend. Group data is saved in the current browser and restored after a refresh.
 
-React 19, Vite 8, JavaScript, CSS, ESLint 10, and Node's built-in test runner.
+## Problem statement
 
-## Getting started
+Splitting shared costs in a small group is easy to get wrong. People usually track expenses in chat, a notes app, or memory, which makes it difficult to answer basic questions:
 
-Requires Node.js `^20.19.0` or `>=22.12.0`.
+- How much has the group spent in total?
+- What is each person's equal share?
+- Who overpaid, who still owes money, and by how much?
+- What is the shortest clear set of payments that settles everyone?
 
-```bash
-npm install
-npm run dev
-```
+SplitEasy solves those problems with an equal-share model, exact currency arithmetic, visible balances, and a suggested payment plan. It deliberately stays frontend-only for Week 1: no authentication, backend, or database.
 
-## Scripts
+## Implemented features
 
-| Command           | Purpose                         |
-| ----------------- | ------------------------------- |
-| `npm run dev`     | Start the Vite development server |
-| `npm run build`   | Build for production            |
-| `npm run preview` | Preview the production build    |
-| `npm run lint`    | Run ESLint                      |
-| `npm test`        | Run calculation and storage tests |
-| `npm run check`   | Lint, test, and build           |
+### Group management
 
-## How the split works
+- Add and remove 2–6 members
+- Trim and normalize names
+- Reject empty, overlong, and case-insensitive duplicate names
+- Show group capacity, remaining slots, and validation feedback
+- Prevent removing a member who is linked to an expense
 
-Each member's share is `total expenditure / number of members`. A member's balance is:
+### Expense management
+
+- Add an expense with description, amount, and payer
+- Reject empty descriptions, invalid amounts, and unknown payers
+- List expenses newest first
+- Delete any expense with a labelled, keyboard-accessible control
+- Recalculate totals, shares, balances, and settlement arrows immediately
+
+### Split summary and balances
+
+- Total spent, equal share, and group size
+- Paid amount and equal share for every member
+- Positive, negative, and settled balances with `+`, `−`, and `=` markers, so meaning does not depend on color alone
+- Exact INR formatting using `Intl.NumberFormat`
+
+### Who pays whom
+
+- Converts balances into a short list of suggested payments
+- Shows one animated, hand-drawn arrow per payment
+- Handles one debtor paying several people or several debtors paying one person
+- Shows an “Everyone is settled up” state when no transfer is needed
+- Draws arrows when the section scrolls into view and respects reduced-motion preferences
+
+### Persistence and data safety
+
+- Saves members and expenses together under `splitease:state:v1`
+- Restores state after browser refresh
+- Recovers safely from missing, malformed, unreadable, or edited saved data
+- Drops invalid records and reports skipped entries
+- Shows a warning if browser storage is unavailable or a save fails
+
+### Responsive and accessible UI
+
+- Tested layouts from 320 px mobile through tablet and desktop
+- Semantic headings, real labels, visible focus rings, and a skip link
+- Inline field errors connected with `aria-invalid` and `aria-describedby`
+- Live regions for changing counts, totals, and action feedback
+- Decorative icons and arrows hidden from assistive technology
+- Screen-reader sentences for every suggested payment
+- Reduced-motion support
+
+## Technology stack
+
+| Area | Technology |
+| --- | --- |
+| UI | React 19 |
+| Build tool | Vite 8 |
+| Language | JavaScript (ES modules), JSX |
+| Styling | CSS custom properties, Grid, Flexbox, media queries |
+| Persistence | Browser `localStorage` |
+| Money formatting | `Intl.NumberFormat` (`en-IN`, INR) |
+| Linting | ESLint 10 with React Hooks and React Refresh plugins |
+| Testing | Node's built-in test runner |
+| Fonts | Instrument Serif via `@fontsource` |
+| Deployment target | Vercel (Vite preset) |
+
+No backend, database, authentication, or environment variables are required.
+
+## Expense calculation
+
+For a group with `n` members:
 
 ```text
-balance = amount paid - equal share
+equal share = total expenditure / n
+member balance = amount paid by member - equal share
 ```
 
-Positive means the member is owed money, negative means they owe money, and zero means they are settled.
+- A **positive balance** means the member is owed money.
+- A **negative balance** means the member owes money.
+- A **zero balance** means the member is settled.
 
-Money is calculated in integer paise. If a total cannot be split evenly, the base share is rounded down and the remaining paise are assigned to the first members so balances still sum to zero.
+All arithmetic is performed in integer paise instead of floating-point rupees. When a total cannot be divided evenly, the base share is rounded down and the remaining paise are assigned to the first members, keeping the sum of balances at exactly zero.
 
-## Who pays whom
+### Official example
 
-The “Who pays whom” section turns the member balances into a short payment plan. Debtors are paired with creditors largest balance first, which clears at least one member per payment and keeps the number of arrows small. Each arrow carries the exact amount to transfer, and all amounts are calculated in paise, so the plan always clears the group exactly.
+Aman pays ₹900, Riya pays ₹300, and Karan pays ₹0. The group total is ₹1,200 and the equal share for three people is ₹400.
 
-If one person owes two people, they get two arrows. If two people owe the same person, that person receives two arrows. When every balance is zero, the section shows an “Everyone is settled up” state instead. Arrows draw themselves in sequence when the plan changes; users who prefer reduced motion see them immediately.
+| Member | Paid | Equal share | Balance | Result |
+| --- | ---: | ---: | ---: | --- |
+| Aman | ₹900.00 | ₹400.00 | **+₹500.00** | Is owed |
+| Riya | ₹300.00 | ₹400.00 | **−₹100.00** | Owes |
+| Karan | ₹0.00 | ₹400.00 | **−₹400.00** | Owes |
 
-## Saving data
+Suggested settlement:
 
-Members and expenses are saved together as one versioned snapshot in `localStorage` under `splitease:state:v1`. The app reads that snapshot once when it loads and writes a fresh snapshot after every member or expense change. Keeping both lists in one key means a refresh can never restore half of a group.
+- Karan pays Aman ₹400.00
+- Riya pays Aman ₹100.00
 
-Saved data is treated as untrusted. On load, the app:
-
-- ignores malformed JSON and starts with an empty group;
-- drops entries with missing or invalid fields, duplicate ids, or duplicate names;
-- enforces the 6-member limit and name/description limits again;
-- keeps an expense only when its payer still exists, and rebuilds the payer name from the current member record;
-- reports how many invalid entries were skipped.
-
-If browser storage is unavailable or a save fails (private mode, quota, permissions), the app keeps working in memory and shows a visible warning instead of silently losing data.
-
-## Member and expense integrity
-
-An expense must always point to a current member. Removing a member who has paid for one or more expenses is blocked, and an inline message asks you to delete those expenses first. This avoids orphaned expenses and prevents financial history from disappearing silently. Deleting an expense is always allowed and updates every total immediately.
+This example is covered by both unit and browser tests.
 
 ## Project structure
 
 ```text
-src/
-├── components/   # Group, expense, summary, balance, and status UI
-├── hooks/        # Group and expense state
-├── styles/       # Tokens, base styles, layout, and components
-├── utils/        # Validation, money, balances, and localStorage handling
-├── App.jsx
-└── main.jsx
-tests/            # Calculation, validation, and storage tests
+splitease-Shashank/
+├── public/
+│   └── favicon.svg
+├── src/
+│   ├── components/
+│   │   ├── ui/
+│   │   │   ├── HandNote.jsx
+│   │   │   └── Icons.jsx
+│   │   ├── ExpenseForm.jsx
+│   │   ├── ExpenseList.jsx
+│   │   ├── ExpenseManager.jsx
+│   │   ├── ExpenseSummary.jsx
+│   │   ├── GroupManager.jsx
+│   │   ├── Header.jsx
+│   │   ├── MemberBalances.jsx
+│   │   ├── MemberForm.jsx
+│   │   ├── MemberList.jsx
+│   │   ├── SettlementPlan.jsx
+│   │   └── StorageNotice.jsx
+│   ├── hooks/
+│   │   ├── useExpenses.js
+│   │   └── useGroupMembers.js
+│   ├── styles/
+│   │   ├── base.css
+│   │   ├── components.css
+│   │   ├── index.css
+│   │   ├── layout.css
+│   │   └── tokens.css
+│   ├── utils/
+│   │   ├── balanceUtils.js
+│   │   ├── expenseUtils.js
+│   │   ├── id.js
+│   │   ├── memberUtils.js
+│   │   └── storage.js
+│   ├── App.jsx
+│   └── main.jsx
+├── tests/
+│   ├── balanceUtils.test.js
+│   ├── expenseUtils.test.js
+│   ├── memberUtils.test.js
+│   └── storage.test.js
+├── .editorconfig
+├── .gitignore
+├── eslint.config.js
+├── index.html
+├── package.json
+├── package-lock.json
+├── vite.config.js
+└── README.md
 ```
 
-## Notes
+Component files use PascalCase, hooks use the `use*` convention, and utilities use camelCase. Styling is split by responsibility rather than by component file, keeping shared tokens, layout, and component rules centralized.
 
-- Splitting is always equal across current group members.
-- Data stays in the current browser and is not synced anywhere.
-- No backend, authentication, custom splits, or automatic money transfers yet.
+## Installation
+
+Requires Node.js `^20.19.0` or `>=22.12.0`.
+
+```bash
+git clone https://github.com/shashank03-dev/splitease-Shashank.git
+cd splitease-Shashank
+npm install
+```
+
+## Local development commands
+
+| Command | Purpose |
+| --- | --- |
+| `npm run dev` | Start the Vite development server |
+| `npm run build` | Create a production build in `dist/` |
+| `npm run preview` | Serve the production build locally |
+| `npm run lint` | Lint all JavaScript and JSX with ESLint |
+| `npm test` | Run unit tests with Node's test runner |
+| `npm run check` | Run lint, tests, and the production build |
+
+Start developing at the URL printed by Vite, normally `http://localhost:5173`.
+
+## Data and privacy
+
+- Data is stored only in the current browser under `splitease:state:v1`.
+- Nothing is sent to a server.
+- Clearing site data removes the saved group.
+- Storage is per browser and per device; it does not sync between people or tabs.
+- LocalStorage is not encrypted and should not be used for sensitive financial records.
+
+## Deployment
+
+SplitEasy is ready for Vercel's Vite preset:
+
+1. Import the GitHub repository into Vercel.
+2. Keep the framework preset as **Vite**.
+3. Use `npm run build` as the build command.
+4. Use `dist` as the output directory.
+5. No environment variables are required.
+
+No custom `vercel.json` is needed because the app has a single route and Vercel detects Vite automatically.
+
+- **Repository:** https://github.com/shashank03-dev/splitease-Shashank
+- **Live application:** Pending final deployment approval
+
+## Scope and limitations
+
+- Splitting is always equal across current members.
+- No custom shares, recurring expenses, settlement history, or “mark as paid” action.
+- No backend, authentication, database, or cross-device synchronization.
+- Removing a member requires deleting their linked expenses first.
+- Week 1 intentionally excludes backend services.
