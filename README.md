@@ -3,7 +3,7 @@
 A frontend-only shared expense manager for friends, flatmates, and travel groups. Built for the **CodGen MERN Full Stack internship, Week 1**.
 
 - **Repository:** [github.com/shashank03-dev/splitease-Shashank](https://github.com/shashank03-dev/splitease-Shashank)
-- **Live application:** Pending final deployment approval
+- **Live application:** [splitease-shashank.vercel.app](https://splitease-shashank.vercel.app)
 
 ## Overview
 
@@ -222,7 +222,7 @@ SplitEasy is ready for Vercel's Vite preset:
 No custom `vercel.json` is needed because the app has a single route and Vercel detects Vite automatically.
 
 - **Repository:** https://github.com/shashank03-dev/splitease-Shashank
-- **Live application:** Pending final deployment approval
+- **Live application:** [splitease-shashank.vercel.app](https://splitease-shashank.vercel.app)
 
 ## Scope and limitations
 
