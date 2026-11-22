@@ -1,6 +1,6 @@
 # SplitEasy
 
-A frontend-only shared expense manager for friends, flatmates, and travel groups. Built for the **CodGen MERN Full Stack internship, Week 1**.
+A shared expense manager for friends, flatmates, and travel groups. Built for the **CodGen MERN Full Stack internship**. Week 1 delivered the React frontend; Week 2 adds the Express and MongoDB backend.
 
 - **Repository:** [github.com/shashank03-dev/splitease-Shashank](https://github.com/shashank03-dev/splitease-Shashank)
 - **Live application:** [splitease-shashank.vercel.app](https://splitease-shashank.vercel.app)
@@ -9,7 +9,7 @@ A frontend-only shared expense manager for friends, flatmates, and travel groups
 
 SplitEasy replaces manual shared-expense arithmetic with a focused, browser-based workflow. A group of 2–6 people can add themselves, log who paid for what, see each person's equal share and net balance, delete mistakes, and follow a clear “Who pays whom” settlement plan.
 
-The app works without an account or backend. Group data is saved in the current browser and restored after a refresh.
+The Week 1 frontend works without an account. Group data is saved in the current browser and restored after a refresh. The Week 2 backend foundation lives in `server/`; the React app will be connected to it during the week.
 
 ## Problem statement
 
@@ -20,7 +20,7 @@ Splitting shared costs in a small group is easy to get wrong. People usually tra
 - Who overpaid, who still owes money, and by how much?
 - What is the shortest clear set of payments that settles everyone?
 
-SplitEasy solves those problems with an equal-share model, exact currency arithmetic, visible balances, and a suggested payment plan. It deliberately stays frontend-only for Week 1: no authentication, backend, or database.
+SplitEasy solves those problems with an equal-share model, exact currency arithmetic, visible balances, and a suggested payment plan. Week 1 deliberately stayed frontend-only: no authentication, backend, or database. Week 2 introduces the API and database.
 
 ## Implemented features
 
@@ -81,14 +81,17 @@ SplitEasy solves those problems with an equal-share model, exact currency arithm
 | Build tool | Vite 8 |
 | Language | JavaScript (ES modules), JSX |
 | Styling | CSS custom properties, Grid, Flexbox, media queries |
-| Persistence | Browser `localStorage` |
+| Persistence (Week 1) | Browser `localStorage` |
 | Money formatting | `Intl.NumberFormat` (`en-IN`, INR) |
 | Linting | ESLint 10 with React Hooks and React Refresh plugins |
 | Testing | Node's built-in test runner |
 | Fonts | Instrument Serif via `@fontsource` |
-| Deployment target | Vercel (Vite preset) |
+| API | Node.js, Express 5 |
+| Database | MongoDB Atlas with Mongoose 9 |
+| Backend config | dotenv, CORS |
+| Deployment target | Vercel (Vite preset) for the client |
 
-No backend, database, authentication, or environment variables are required.
+Week 1 required no backend or environment variables. Week 2 adds `server/` and its own `.env`.
 
 ## Expense calculation
 
@@ -126,57 +129,81 @@ This example is covered by both unit and browser tests.
 
 ```text
 splitease-Shashank/
-├── public/
-│   └── favicon.svg
-├── src/
-│   ├── components/
-│   │   ├── ui/
-│   │   │   ├── HandNote.jsx
-│   │   │   └── Icons.jsx
-│   │   ├── ExpenseForm.jsx
-│   │   ├── ExpenseList.jsx
-│   │   ├── ExpenseManager.jsx
-│   │   ├── ExpenseSummary.jsx
-│   │   ├── GroupManager.jsx
-│   │   ├── Header.jsx
-│   │   ├── MemberBalances.jsx
-│   │   ├── MemberForm.jsx
-│   │   ├── MemberList.jsx
-│   │   ├── SettlementPlan.jsx
-│   │   └── StorageNotice.jsx
-│   ├── hooks/
-│   │   ├── useExpenses.js
-│   │   └── useGroupMembers.js
-│   ├── styles/
-│   │   ├── base.css
-│   │   ├── components.css
-│   │   ├── index.css
-│   │   ├── layout.css
-│   │   └── tokens.css
-│   ├── utils/
-│   │   ├── balanceUtils.js
-│   │   ├── expenseUtils.js
-│   │   ├── id.js
-│   │   ├── memberUtils.js
-│   │   └── storage.js
-│   ├── App.jsx
-│   └── main.jsx
-├── tests/
-│   ├── balanceUtils.test.js
-│   ├── expenseUtils.test.js
-│   ├── memberUtils.test.js
-│   └── storage.test.js
+├── client/
+│   ├── public/
+│   │   └── favicon.svg
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── ui/
+│   │   │   │   ├── HandNote.jsx
+│   │   │   │   └── Icons.jsx
+│   │   │   ├── ExpenseForm.jsx
+│   │   │   ├── ExpenseList.jsx
+│   │   │   ├── ExpenseManager.jsx
+│   │   │   ├── ExpenseSummary.jsx
+│   │   │   ├── GroupManager.jsx
+│   │   │   ├── Header.jsx
+│   │   │   ├── MemberBalances.jsx
+│   │   │   ├── MemberForm.jsx
+│   │   │   ├── MemberList.jsx
+│   │   │   ├── SettlementPlan.jsx
+│   │   │   └── StorageNotice.jsx
+│   │   ├── hooks/
+│   │   │   ├── useExpenses.js
+│   │   │   └── useGroupMembers.js
+│   │   ├── styles/
+│   │   │   ├── base.css
+│   │   │   ├── components.css
+│   │   │   ├── index.css
+│   │   │   ├── layout.css
+│   │   │   └── tokens.css
+│   │   ├── utils/
+│   │   │   ├── balanceUtils.js
+│   │   │   ├── expenseUtils.js
+│   │   │   ├── id.js
+│   │   │   ├── memberUtils.js
+│   │   │   └── storage.js
+│   │   ├── App.jsx
+│   │   └── main.jsx
+│   ├── tests/
+│   │   ├── balanceUtils.test.js
+│   │   ├── expenseUtils.test.js
+│   │   ├── memberUtils.test.js
+│   │   └── storage.test.js
+│   ├── eslint.config.js
+│   ├── index.html
+│   ├── package.json
+│   ├── package-lock.json
+│   └── vite.config.js
+├── server/
+│   ├── src/
+│   │   ├── config/
+│   │   │   ├── db.js
+│   │   │   └── env.js
+│   │   ├── middleware/
+│   │   │   ├── errorHandler.js
+│   │   │   └── notFound.js
+│   │   ├── routes/
+│   │   │   └── health.routes.js
+│   │   ├── app.js
+│   │   └── server.js
+│   ├── .env.example
+│   ├── package.json
+│   └── package-lock.json
 ├── .editorconfig
 ├── .gitignore
-├── eslint.config.js
-├── index.html
-├── package.json
-├── package-lock.json
-├── vite.config.js
 └── README.md
 ```
 
-Component files use PascalCase, hooks use the `use*` convention, and utilities use camelCase. Styling is split by responsibility rather than by component file, keeping shared tokens, layout, and component rules centralized.
+The frontend and backend are independent packages: `client/` owns the Vite/React app, and `server/` owns the Express API. Component files use PascalCase, hooks use the `use*` convention, and utilities use camelCase. Styling is split by responsibility rather than by component file, keeping shared tokens, layout, and component rules centralized.
+
+The server separates concerns so it can grow without becoming one large file:
+
+- `server.js` is the entry point: validate configuration, connect to MongoDB, then listen for HTTP requests.
+- `app.js` builds the Express application and defines middleware order.
+- `config/` loads environment variables and owns the Mongoose connection.
+- `routes/` contains route handlers. Today it only has the health check.
+- `middleware/` contains shared 404 and error handling.
 
 ## Installation
 
@@ -185,10 +212,24 @@ Requires Node.js `^20.19.0` or `>=22.12.0`.
 ```bash
 git clone https://github.com/shashank03-dev/splitease-Shashank.git
 cd splitease-Shashank
+
+# Frontend
+cd client
 npm install
+
+# Backend
+cd ../server
+npm install
+cp .env.example .env
 ```
 
+Then open `server/.env` and set `MONGO_URI` to your own MongoDB Atlas connection string. Never commit that file.
+
 ## Local development commands
+
+Run the client and server in two separate terminals.
+
+**Terminal 1 - frontend (`client/`):**
 
 | Command | Purpose |
 | --- | --- |
@@ -201,25 +242,56 @@ npm install
 
 Start developing at the URL printed by Vite, normally `http://localhost:5173`.
 
+**Terminal 2 - backend (`server/`):**
+
+| Command | Purpose |
+| --- | --- |
+| `npm run dev` | Start the API and restart it when files change (`node --watch`) |
+| `npm start` | Start the API without file watching |
+
+The API listens on `http://localhost:5000` by default. The health check is `GET http://localhost:5000/api/health`.
+
+> **macOS note:** AirPlay Receiver often occupies port 5000. If startup fails with `EADDRINUSE`, set `PORT=5001` in `server/.env` and use `http://localhost:5001` instead.
+
+## Backend environment variables
+
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `MONGO_URI` | Yes | MongoDB Atlas connection string, including the database name |
+| `PORT` | No | HTTP port, default `5000` |
+| `NODE_ENV` | No | `development`, `production`, or `test` |
+| `CLIENT_ORIGIN` | No | Comma-separated browser origins allowed by CORS, default `http://localhost:5173` |
+
+To connect Atlas:
+
+1. Create a free cluster in MongoDB Atlas.
+2. Create a database user under **Database Access**.
+3. Add your current IP under **Network Access**.
+4. Copy the driver connection string, add a database name such as `splitease`, and put it in `server/.env` as `MONGO_URI`.
+5. URL-encode special characters in the password (for example, `@` becomes `%40`).
+
+The health endpoint returns `200` with `database: "connected"`, or `503` with `database: "disconnected"` if the API is up but the database is not.
+
 ## Data and privacy
 
-- Data is stored only in the current browser under `splitease:state:v1`.
-- Nothing is sent to a server.
+- Week 1 group and expense data is still stored only in the current browser under `splitease:state:v1`.
+- The frontend does not send group or expense data to the API yet; only the backend health check exists.
 - Clearing site data removes the saved group.
 - Storage is per browser and per device; it does not sync between people or tabs.
 - LocalStorage is not encrypted and should not be used for sensitive financial records.
 
 ## Deployment
 
-SplitEasy is ready for Vercel's Vite preset:
+The frontend is ready for Vercel's Vite preset. Because the app now lives in `client/`, set the Vercel project's **Root Directory** to `client`:
 
 1. Import the GitHub repository into Vercel.
-2. Keep the framework preset as **Vite**.
-3. Use `npm run build` as the build command.
-4. Use `dist` as the output directory.
-5. No environment variables are required.
+2. Set **Root Directory** to `client`.
+3. Keep the framework preset as **Vite**.
+4. Use `npm run build` as the build command.
+5. Use `dist` as the output directory.
+6. No frontend environment variables are required.
 
-No custom `vercel.json` is needed because the app has a single route and Vercel detects Vite automatically.
+The Express API is not deployed by this Vercel project. Deploy `server/` separately when the API is ready.
 
 - **Repository:** https://github.com/shashank03-dev/splitease-Shashank
 - **Live application:** [splitease-shashank.vercel.app](https://splitease-shashank.vercel.app)
@@ -228,6 +300,6 @@ No custom `vercel.json` is needed because the app has a single route and Vercel 
 
 - Splitting is always equal across current members.
 - No custom shares, recurring expenses, settlement history, or “mark as paid” action.
-- No backend, authentication, database, or cross-device synchronization.
+- No authentication or cross-device synchronization yet.
 - Removing a member requires deleting their linked expenses first.
-- Week 1 intentionally excludes backend services.
+- Week 2 currently contains the backend foundation only: Express, MongoDB Atlas, environment configuration, CORS, and a health check. Models and CRUD routes come next.

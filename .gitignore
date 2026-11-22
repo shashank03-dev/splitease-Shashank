@@ -12,7 +12,7 @@ dist
 dist-ssr
 *.local
 
-# Environment files
+# Environment files (client/ and server/)
 .env
 .env.*
 !.env.example
