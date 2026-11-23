@@ -180,11 +180,20 @@ splitease-Shashank/
 │   │   ├── config/
 │   │   │   ├── db.js
 │   │   │   └── env.js
+│   │   ├── controllers/
+│   │   │   └── expense.controller.js
 │   │   ├── middleware/
 │   │   │   ├── errorHandler.js
 │   │   │   └── notFound.js
+│   │   ├── models/
+│   │   │   └── expense.model.js
 │   │   ├── routes/
+│   │   │   ├── expense.routes.js
 │   │   │   └── health.routes.js
+│   │   ├── services/
+│   │   │   └── person.service.js
+│   │   ├── utils/
+│   │   │   └── apiError.js
 │   │   ├── app.js
 │   │   └── server.js
 │   ├── .env.example
@@ -202,8 +211,12 @@ The server separates concerns so it can grow without becoming one large file:
 - `server.js` is the entry point: validate configuration, connect to MongoDB, then listen for HTTP requests.
 - `app.js` builds the Express application and defines middleware order.
 - `config/` loads environment variables and owns the Mongoose connection.
-- `routes/` contains route handlers. Today it only has the health check.
+- `routes/` maps each URL and HTTP method to a controller.
+- `controllers/` validates request input and builds the HTTP response.
+- `models/` defines Mongoose schemas and database-level rules.
+- `services/` holds cross-model rules such as validating a payer reference.
 - `middleware/` contains shared 404 and error handling.
+- `utils/` contains small shared helpers such as the API error type.
 
 ## Installation
 
@@ -253,6 +266,16 @@ The API listens on `http://localhost:5000` by default. The health check is `GET 
 
 > **macOS note:** AirPlay Receiver often occupies port 5000. If startup fails with `EADDRINUSE`, set `PORT=5001` in `server/.env` and use `http://localhost:5001` instead.
 
+### API endpoints
+
+| Method | Path | Purpose | Success |
+| --- | --- | --- | --- |
+| `GET` | `/api/health` | Service and database status | `200` |
+| `GET` | `/api/expenses` | List all expenses, newest first | `200` |
+| `POST` | `/api/expenses` | Create an expense | `201` |
+
+`POST /api/expenses` accepts `description`, `amount` and `paidBy`, plus an optional ISO-8601 `date`. `paidBy` is a 24-character MongoDB ObjectId that will reference the Person model from Day 4. Until that model exists, only the ID format is validated; existence validation is added in `services/person.service.js` without changing the route or controller.
+
 ## Backend environment variables
 
 | Variable | Required | Purpose |
@@ -275,7 +298,7 @@ The health endpoint returns `200` with `database: "connected"`, or `503` with `d
 ## Data and privacy
 
 - Week 1 group and expense data is still stored only in the current browser under `splitease:state:v1`.
-- The frontend does not send group or expense data to the API yet; only the backend health check exists.
+- The frontend does not send group or expense data to the API yet; the backend currently exposes the health check and expense routes.
 - Clearing site data removes the saved group.
 - Storage is per browser and per device; it does not sync between people or tabs.
 - LocalStorage is not encrypted and should not be used for sensitive financial records.
@@ -302,4 +325,4 @@ The Express API is not deployed by this Vercel project. Deploy `server/` separat
 - No custom shares, recurring expenses, settlement history, or “mark as paid” action.
 - No authentication or cross-device synchronization yet.
 - Removing a member requires deleting their linked expenses first.
-- Week 2 currently contains the backend foundation only: Express, MongoDB Atlas, environment configuration, CORS, and a health check. Models and CRUD routes come next.
+- Week 2 currently provides the backend foundation, health check, Expense model, and create/list expense routes. Person validation, update/delete routes, and React integration come next.

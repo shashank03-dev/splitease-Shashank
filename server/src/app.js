@@ -3,6 +3,7 @@ import express from 'express'
 import { env } from './config/env.js'
 import { errorHandler } from './middleware/errorHandler.js'
 import { notFound } from './middleware/notFound.js'
+import expenseRoutes from './routes/expense.routes.js'
 import healthRoutes from './routes/health.routes.js'
 
 const app = express()
@@ -35,10 +36,12 @@ app.get('/', (req, res) => {
     success: true,
     message: 'SplitEasy API',
     health: '/api/health',
+    expenses: '/api/expenses',
   })
 })
 
 app.use('/api/health', healthRoutes)
+app.use('/api/expenses', expenseRoutes)
 
 // Unknown routes and thrown errors are handled in one place.
 app.use(notFound)

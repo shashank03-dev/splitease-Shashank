@@ -10,14 +10,35 @@ export function errorHandler(error, req, res, _next) {
     })
   }
 
-  const status = error.status ?? error.statusCode ?? 500
+  let status = error.status ?? error.statusCode ?? 500
+  let message = error.message
+  let errors = Array.isArray(error.errors) ? error.errors : undefined
+
+  // Safety net for writes that bypass explicit controller validation.
+  if (error.name === 'ValidationError') {
+    status = 400
+    message = 'Validation failed.'
+    errors = Object.values(error.errors).map((fieldError) => ({
+      field: fieldError.path,
+      message: fieldError.message,
+    }))
+  } else if (error.name === 'CastError') {
+    status = 400
+    message = `Invalid value for ${error.path}.`
+  }
 
   if (status >= 500) {
     console.error(`[error] ${req.method} ${req.originalUrl}:`, error)
   }
 
-  return res.status(status).json({
+  const payload = {
     success: false,
-    message: status >= 500 ? 'Internal server error.' : error.message,
-  })
+    message: status >= 500 ? 'Internal server error.' : message,
+  }
+
+  if (errors?.length) {
+    payload.errors = errors
+  }
+
+  return res.status(status).json(payload)
 }
