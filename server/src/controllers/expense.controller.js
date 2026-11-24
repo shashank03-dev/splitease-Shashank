@@ -3,6 +3,7 @@ import Expense, {
 } from '../models/expense.model.js'
 import { validatePayerReference } from '../services/person.service.js'
 import { ApiError } from '../utils/apiError.js'
+import { isObjectId } from '../utils/objectId.js'
 
 function hasAtMostTwoDecimalPlaces(value) {
   return Math.abs(value * 100 - Math.round(value * 100)) < 1e-6
@@ -87,6 +88,20 @@ function validateExpenseBody(body) {
   }
 }
 
+async function findExpenseOrThrow(id) {
+  if (!isObjectId(id)) {
+    throw new ApiError(404, 'Expense not found.')
+  }
+
+  const expense = await Expense.findById(id)
+
+  if (!expense) {
+    throw new ApiError(404, 'Expense not found.')
+  }
+
+  return expense
+}
+
 /**
  * GET /api/expenses
  * Returns every expense, newest first. An empty collection is still a 200.
@@ -114,13 +129,13 @@ export async function createExpense(req, res) {
     throw new ApiError(400, 'Validation failed.', errors)
   }
 
-  // Kept separate so Day 4 can add the Person lookup without touching this file.
-  await validatePayerReference(values.paidBy)
+  // Kept separate so the Person lookup is reusable by create and update.
+  const payerId = await validatePayerReference(values.paidBy)
 
   const expense = await Expense.create({
     description: values.description,
     amount: values.amount,
-    paidBy: values.paidBy,
+    paidBy: payerId,
     ...(values.date ? { date: values.date } : {}),
   })
 
@@ -128,5 +143,52 @@ export async function createExpense(req, res) {
     success: true,
     message: 'Expense created.',
     data: expense,
+  })
+}
+
+/**
+ * PUT /api/expenses/:id
+ * Replaces the editable fields after validating the body and the payer.
+ * Omitting `date` keeps the existing date.
+ */
+export async function updateExpense(req, res) {
+  const expense = await findExpenseOrThrow(req.params.id)
+  const { errors, values } = validateExpenseBody(req.body)
+
+  if (errors.length > 0) {
+    throw new ApiError(400, 'Validation failed.', errors)
+  }
+
+  const payerId = await validatePayerReference(values.paidBy)
+
+  expense.description = values.description
+  expense.amount = values.amount
+  expense.paidBy = payerId
+
+  if (values.date) {
+    expense.date = values.date
+  }
+
+  await expense.save()
+
+  res.status(200).json({
+    success: true,
+    message: 'Expense updated.',
+    data: expense,
+  })
+}
+
+/**
+ * DELETE /api/expenses/:id
+ * Deletes one expense, or returns 404 if it does not exist.
+ */
+export async function deleteExpense(req, res) {
+  const expense = await findExpenseOrThrow(req.params.id)
+  await expense.deleteOne()
+
+  res.status(200).json({
+    success: true,
+    message: 'Expense deleted.',
+    data: { _id: expense._id },
   })
 }

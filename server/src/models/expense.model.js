@@ -26,6 +26,7 @@ const expenseSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Person',
       required: [true, 'paidBy is required.'],
+      index: true,
     },
     date: {
       type: Date,

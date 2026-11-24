@@ -181,19 +181,23 @@ splitease-Shashank/
 │   │   │   ├── db.js
 │   │   │   └── env.js
 │   │   ├── controllers/
-│   │   │   └── expense.controller.js
+│   │   │   ├── expense.controller.js
+│   │   │   └── person.controller.js
 │   │   ├── middleware/
 │   │   │   ├── errorHandler.js
 │   │   │   └── notFound.js
 │   │   ├── models/
-│   │   │   └── expense.model.js
+│   │   │   ├── expense.model.js
+│   │   │   └── person.model.js
 │   │   ├── routes/
 │   │   │   ├── expense.routes.js
-│   │   │   └── health.routes.js
+│   │   │   ├── health.routes.js
+│   │   │   └── person.routes.js
 │   │   ├── services/
 │   │   │   └── person.service.js
 │   │   ├── utils/
-│   │   │   └── apiError.js
+│   │   │   ├── apiError.js
+│   │   │   └── objectId.js
 │   │   ├── app.js
 │   │   └── server.js
 │   ├── .env.example
@@ -271,10 +275,15 @@ The API listens on `http://localhost:5000` by default. The health check is `GET 
 | Method | Path | Purpose | Success |
 | --- | --- | --- | --- |
 | `GET` | `/api/health` | Service and database status | `200` |
+| `GET` | `/api/people` | List all people alphabetically | `200` |
+| `POST` | `/api/people` | Create a person | `201` |
+| `DELETE` | `/api/people/:id` | Delete a person and their expenses | `200` |
 | `GET` | `/api/expenses` | List all expenses, newest first | `200` |
 | `POST` | `/api/expenses` | Create an expense | `201` |
+| `PUT` | `/api/expenses/:id` | Update an expense | `200` |
+| `DELETE` | `/api/expenses/:id` | Delete an expense | `200` |
 
-`POST /api/expenses` accepts `description`, `amount` and `paidBy`, plus an optional ISO-8601 `date`. `paidBy` is a 24-character MongoDB ObjectId that will reference the Person model from Day 4. Until that model exists, only the ID format is validated; existence validation is added in `services/person.service.js` without changing the route or controller.
+`POST` and `PUT /api/expenses` accept `description`, `amount` and `paidBy`, plus an optional ISO-8601 `date`. `paidBy` must be the id of an existing person. Names are unique case-insensitively, and deleting a person deletes every expense paid by that person before removing the person. This is application-level referential integrity because MongoDB does not enforce foreign keys.
 
 ## Backend environment variables
 
@@ -298,7 +307,7 @@ The health endpoint returns `200` with `database: "connected"`, or `503` with `d
 ## Data and privacy
 
 - Week 1 group and expense data is still stored only in the current browser under `splitease:state:v1`.
-- The frontend does not send group or expense data to the API yet; the backend currently exposes the health check and expense routes.
+- The frontend does not send group or expense data to the API yet; the backend exposes health, expense and people routes.
 - Clearing site data removes the saved group.
 - Storage is per browser and per device; it does not sync between people or tabs.
 - LocalStorage is not encrypted and should not be used for sensitive financial records.
@@ -325,4 +334,6 @@ The Express API is not deployed by this Vercel project. Deploy `server/` separat
 - No custom shares, recurring expenses, settlement history, or “mark as paid” action.
 - No authentication or cross-device synchronization yet.
 - Removing a member requires deleting their linked expenses first.
-- Week 2 currently provides the backend foundation, health check, Expense model, and create/list expense routes. Person validation, update/delete routes, and React integration come next.
+- Week 2 currently provides the backend foundation, Expense and Person models, and the full people and expense route sets. React integration and later features come next.
+- Referential integrity is enforced by the API: a person's expenses are deleted before the person. Concurrent writes are not yet wrapped in a MongoDB transaction.
+- Expense responses return `paidBy` as an id; person names can be added later with `populate()`.
