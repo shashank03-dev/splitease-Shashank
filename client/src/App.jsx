@@ -1,70 +1,100 @@
-import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import ExpenseManager from './components/ExpenseManager'
 import GroupManager from './components/GroupManager'
 import Header from './components/Header'
-import StorageNotice from './components/StorageNotice'
+import Notice from './components/Notice'
 import HandNote from './components/ui/HandNote'
-import { AlertCircleIcon, LockIcon } from './components/ui/Icons'
-import { useExpenses } from './hooks/useExpenses'
-import { useGroupMembers } from './hooks/useGroupMembers'
 import {
-  dismissStorageStatusMessage,
-  getStorageStatus,
-  readSplitState,
-  subscribeToStorageStatus,
-  writeSplitState,
-} from './utils/storage'
+  AlertCircleIcon,
+  CheckIcon,
+  InfoIcon,
+} from './components/ui/Icons'
+import { useExpenses } from './hooks/useExpenses'
+import { usePeople } from './hooks/usePeople'
+import { withPayerNames } from './utils/apiMappers'
+import { MAX_GROUP_SIZE } from './utils/memberUtils'
 
 export default function App() {
-  const [initialState] = useState(() => readSplitState())
-  const [loadNotice, setLoadNotice] = useState(initialState.notice)
-  const saveStatus = useSyncExternalStore(
-    subscribeToStorageStatus,
-    getStorageStatus,
-    getStorageStatus,
-  )
+  const {
+    people,
+    isLoading: isPeopleLoading,
+    hasLoaded: hasLoadedPeople,
+    loadError: peopleLoadError,
+    error: memberError,
+    isAdding: isAddingMember,
+    removingId,
+    addPerson,
+    removePerson,
+    clearError,
+    retry: retryPeople,
+  } = usePeople()
 
   const {
-    members,
-    error,
-    addMember,
-    removeMember,
-    clearError,
-    isAtLimit,
-    remainingSlots,
-  } = useGroupMembers(initialState.members)
+    expenses: apiExpenses,
+    canAddExpense,
+    isLoading: isExpensesLoading,
+    hasLoaded: hasLoadedExpenses,
+    loadError: expensesLoadError,
+    isAdding: isAddingExpense,
+    deletingId,
+    addExpense,
+    removeExpense,
+    retry: retryExpenses,
+    refresh: refreshExpenses,
+  } = useExpenses(people)
 
-  const { expenses, canAddExpense, addExpense, removeExpense } = useExpenses(
-    members,
-    initialState.expenses,
+  /**
+   * The API stores only paidBy. Names are joined from the loaded people list
+   * for display, so the two collections never keep conflicting copies.
+   */
+  const expenses = useMemo(
+    () => withPayerNames(apiExpenses, people),
+    [apiExpenses, people],
   )
 
+  const [dismissedMessage, setDismissedMessage] = useState('')
+  const [isRetrying, setIsRetrying] = useState(false)
+
+  const loadErrors = useMemo(
+    () =>
+      [...new Set([peopleLoadError, expensesLoadError].filter(Boolean))],
+    [expensesLoadError, peopleLoadError],
+  )
+  const noticeMessage = loadErrors.join(' ')
+  const showNotice =
+    noticeMessage !== '' && dismissedMessage !== noticeMessage
+  const isLoading = isPeopleLoading || isExpensesLoading
+  const hasApiError = loadErrors.length > 0
+  const isPeopleUnavailable = Boolean(peopleLoadError) && !hasLoadedPeople
+  const isExpensesUnavailable =
+    Boolean(expensesLoadError) && !hasLoadedExpenses
+  const isExpenseDataUnavailable =
+    isPeopleUnavailable || isExpensesUnavailable
+  const hasLoadedExpenseData = hasLoadedPeople && hasLoadedExpenses
+  const isExpenseDataLoading = isPeopleLoading || isExpensesLoading
+  const expenseDataError = expensesLoadError || peopleLoadError
+
+  const expenseCountsByMember = useMemo(() => {
+    const counts = new Map()
+
+    expenses.forEach((expense) => {
+      counts.set(
+        expense.payerId,
+        (counts.get(expense.payerId) ?? 0) + 1,
+      )
+    })
+
+    return counts
+  }, [expenses])
+
   /**
-   * Persistence is a side effect, not part of rendering. This runs after React
-   * has committed every member or expense change, so storage always receives
-   * the same arrays the screen is showing. Save failures are published through
-   * the storage status store instead of scheduling React state from this effect.
-   */
-  useEffect(() => {
-    writeSplitState({ members, expenses })
-  }, [members, expenses])
-
-  const expenseCountsByMember = new Map()
-
-  expenses.forEach((expense) => {
-    expenseCountsByMember.set(
-      expense.payerId,
-      (expenseCountsByMember.get(expense.payerId) ?? 0) + 1,
-    )
-  })
-
-  /**
-   * Referential integrity: an expense must always point at a current member.
-   * Blocking removal is safer than silently deleting financial history.
+   * Referential integrity: the API can cascade a person's expenses, but the
+   * Week 1 UI deliberately blocks removal until those expenses are deleted by
+   * hand. The API call then uses the real MongoDB id.
    */
   const handleRemoveMember = useCallback(
-    (memberId) => {
-      const member = members.find((entry) => entry.id === memberId)
+    async (memberId) => {
+      const member = people.find((entry) => entry.id === memberId)
 
       if (!member) {
         return { ok: false }
@@ -78,26 +108,58 @@ export default function App() {
         return { ok: false, code: 'linked-expenses' }
       }
 
-      removeMember(memberId)
-      return { ok: true }
+      const result = await removePerson(memberId)
+
+      if (result.ok) {
+        // A concurrent cascade on the server could also remove expenses, so
+        // re-read the collection after any person deletion.
+        await refreshExpenses()
+      }
+
+      return result
     },
-    [expenses, members, removeMember],
+    [expenses, people, refreshExpenses, removePerson],
   )
 
-  function handleDismissNotice() {
-    dismissStorageStatusMessage()
-    setLoadNotice('')
+  async function handleRetry() {
+    setDismissedMessage('')
+    setIsRetrying(true)
+
+    try {
+      await Promise.all([retryPeople(), retryExpenses()])
+    } finally {
+      setIsRetrying(false)
+    }
   }
 
-  const storageAvailable = initialState.storageAvailable && saveStatus.available
-  const noticeMessage = saveStatus.message || loadNotice
-  const noticeTone = saveStatus.message ? 'danger' : 'info'
-  const memberCount = members.length
+  function handleDismissNotice() {
+    setDismissedMessage(noticeMessage)
+  }
+
+  const memberCount = people.length
   const hasExpenses = expenses.length > 0
 
   let guide
 
-  if (memberCount === 0) {
+  if (peopleLoadError && !hasLoadedPeople) {
+    guide = {
+      target: 'group',
+      kicker: 'Offline',
+      copy: 'Start the SplitEasy API, then retry the group.',
+    }
+  } else if (expensesLoadError && !hasLoadedExpenses) {
+    guide = {
+      target: 'expenses',
+      kicker: 'Offline',
+      copy: 'The expense log could not be loaded. Try again.',
+    }
+  } else if (!hasLoadedPeople || !hasLoadedExpenses) {
+    guide = {
+      target: 'group',
+      kicker: 'Connecting',
+      copy: 'Loading your saved group from the API.',
+    }
+  } else if (memberCount === 0) {
     guide = {
       target: 'group',
       kicker: 'Start here',
@@ -123,6 +185,21 @@ export default function App() {
     }
   }
 
+  let footerIcon = <CheckIcon size={14} />
+  let footerNote = 'Synced with the SplitEasy API — data is stored in MongoDB.'
+  let footerClass = ''
+
+  if (hasApiError) {
+    footerIcon = <AlertCircleIcon size={14} />
+    footerNote =
+      'The SplitEasy API is unavailable — changes cannot be saved right now.'
+    footerClass = ' site-footer__note--danger'
+  } else if (isLoading) {
+    footerIcon = <InfoIcon size={14} />
+    footerNote = 'Connecting to the SplitEasy API…'
+    footerClass = ' site-footer__note--loading'
+  }
+
   return (
     <div className="app-shell" id="top">
       <a className="skip-link" href="#group">
@@ -132,11 +209,15 @@ export default function App() {
       <Header />
 
       <main className="container main" id="main-content">
-        <StorageNotice
-          message={noticeMessage}
-          tone={noticeTone}
-          onDismiss={handleDismissNotice}
-        />
+        {showNotice ? (
+          <Notice
+            message={noticeMessage}
+            tone="danger"
+            onDismiss={handleDismissNotice}
+            onRetry={handleRetry}
+            isRetrying={isRetrying}
+          />
+        ) : null}
 
         <div className="intro-grid">
           <section className="intro" id="rules" aria-labelledby="page-heading">
@@ -167,14 +248,21 @@ export default function App() {
               ) : null}
 
               <GroupManager
-                members={members}
+                members={people}
                 expenseCountsByMember={expenseCountsByMember}
-                error={error}
-                isAtLimit={isAtLimit}
-                remainingSlots={remainingSlots}
-                onAddMember={addMember}
+                error={memberError}
+                isAtLimit={memberCount >= MAX_GROUP_SIZE}
+                remainingSlots={Math.max(MAX_GROUP_SIZE - memberCount, 0)}
+                isLoading={isPeopleLoading}
+                hasLoaded={hasLoadedPeople}
+                loadError={peopleLoadError}
+                isAdding={isAddingMember}
+                removingId={removingId}
+                isUnavailable={isPeopleUnavailable}
+                onAddMember={addPerson}
                 onRemoveMember={handleRemoveMember}
                 onClearError={clearError}
+                onRetry={retryPeople}
               />
             </div>
 
@@ -189,11 +277,20 @@ export default function App() {
               ) : null}
 
               <ExpenseManager
-                members={members}
+                members={people}
                 expenses={expenses}
                 canAddExpense={canAddExpense}
+                isLoading={isExpenseDataLoading}
+                hasLoaded={hasLoadedExpenseData}
+                loadError={expenseDataError}
+                isAdding={isAddingExpense}
+                deletingId={deletingId}
+                isUnavailable={isExpenseDataUnavailable}
                 onAddExpense={addExpense}
                 onDeleteExpense={removeExpense}
+                onRetry={async () => {
+                  await Promise.all([retryExpenses(), retryPeople()])
+                }}
               />
             </div>
           </div>
@@ -202,19 +299,9 @@ export default function App() {
 
       <footer className="site-footer">
         <div className="container site-footer__inner">
-          <p
-            className={`site-footer__note${
-              storageAvailable ? '' : ' site-footer__note--danger'
-            }`}
-          >
-            {storageAvailable ? (
-              <LockIcon size={14} />
-            ) : (
-              <AlertCircleIcon size={14} />
-            )}
-            {storageAvailable
-              ? 'Saved locally in this browser — no account, no server.'
-              : 'Changes are not being saved in this browser.'}
+          <p className={`site-footer__note${footerClass}`}>
+            {footerIcon}
+            {footerNote}
           </p>
           <p className="site-footer__meta">SplitEasy · equal splits, clearly.</p>
         </div>

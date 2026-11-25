@@ -5,6 +5,7 @@ import { AlertCircleIcon, TrashIcon, UsersIcon } from './ui/Icons'
 export default function MemberList({
   members,
   expenseCountsByMember = new Map(),
+  removingId = null,
   nameInputRef,
   onRemoveMember,
 }) {
@@ -14,10 +15,14 @@ export default function MemberList({
 
   /**
    * Deleting a focused button would otherwise drop keyboard focus onto the
-   * document body. After the list commits, move focus to the next row's remove
-   * button, or back to the name field when the list is empty.
+   * document body. Once the in-flight removal settles, move focus to the next
+   * row's remove button, or back to the name field when the list is empty.
    */
   useEffect(() => {
+    if (removingId) {
+      return
+    }
+
     const target = pendingFocusRef.current
 
     if (!target) {
@@ -32,22 +37,31 @@ export default function MemberList({
     }
 
     removeButtonRefs.current.get(target)?.focus()
-  }, [members, nameInputRef])
+  }, [members, nameInputRef, removingId])
 
-  function handleRemove(member, index) {
+  async function handleRemove(member, index) {
+    if (removingId) {
+      return
+    }
+
     const remaining = members.filter((entry) => entry.id !== member.id)
     const nextMember = remaining[index] ?? remaining[index - 1] ?? null
-    const result = onRemoveMember(member.id)
+
+    pendingFocusRef.current = nextMember ? nextMember.id : 'input'
+
+    const result = await onRemoveMember(member.id)
 
     if (!result?.ok) {
+      pendingFocusRef.current = null
+
       if (result?.code === 'linked-expenses') {
         setBlockedMemberId(member.id)
       }
+
       return
     }
 
     setBlockedMemberId(null)
-    pendingFocusRef.current = nextMember ? nextMember.id : 'input'
   }
 
   if (members.length === 0) {
@@ -74,8 +88,10 @@ export default function MemberList({
           const showBlockedError =
             blockedMemberId === member.id && linkedExpenseCount > 0
           const errorId = `member-error-${member.id}`
-          const removeLabel =
-            linkedExpenseCount > 0
+          const isRemoving = removingId === member.id
+          const removeLabel = isRemoving
+            ? `Removing ${member.name}…`
+            : linkedExpenseCount > 0
               ? `Remove ${member.name} — delete ${linkedExpenseCount} linked ${
                   linkedExpenseCount === 1 ? 'expense' : 'expenses'
                 } first`
@@ -111,6 +127,8 @@ export default function MemberList({
                   onClick={() => handleRemove(member, index)}
                   aria-label={removeLabel}
                   aria-describedby={showBlockedError ? errorId : undefined}
+                  aria-busy={isRemoving}
+                  disabled={Boolean(removingId)}
                   title={removeLabel}
                 >
                   <TrashIcon size={16} />

@@ -8,10 +8,14 @@ export default function MemberForm({
   isAtLimit,
   remainingSlots,
   inputRef,
+  isBusy = false,
+  isAdding = false,
   onAddMember,
   onClearError,
 }) {
   const [name, setName] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState('')
   const localInputRef = useRef(null)
   const nameInputRef = inputRef ?? localInputRef
   const inputId = useId()
@@ -19,34 +23,83 @@ export default function MemberForm({
   const errorId = useId()
 
   const isFull = isAtLimit
-  const describedBy = [hintId, error ? errorId : null].filter(Boolean).join(' ')
+  const isWorking = isAdding || isSubmitting
+  const isDisabled = isFull || isBusy || isWorking
+  const displayError = error || submitError
+  const describedBy = [hintId, displayError ? errorId : null]
+    .filter(Boolean)
+    .join(' ')
 
   function handleChange(event) {
     setName(event.target.value)
+    setSubmitError('')
 
     if (error) {
       onClearError()
     }
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault()
 
-    const result = onAddMember(name)
+    if (isDisabled) {
+      return
+    }
 
-    if (result.ok) {
-      setName('')
+    setIsSubmitting(true)
+    setSubmitError('')
 
-      if (memberCount + 1 < MAX_GROUP_SIZE) {
-        nameInputRef.current?.focus()
+    try {
+      const result = await onAddMember(name)
+
+      if (result?.ok) {
+        setName('')
+        setSubmitError('')
+
+        if (memberCount + 1 < MAX_GROUP_SIZE) {
+          nameInputRef.current?.focus()
+        }
+
+        return
       }
-    } else {
+
+      // The hook also stores the message; this local copy makes the error
+      // visible immediately if a parent render is delayed.
+      setSubmitError(result?.message || 'Could not add this person.')
       nameInputRef.current?.focus()
+    } catch {
+      setSubmitError(
+        'Could not add this person. Check the API connection and try again.',
+      )
+      nameInputRef.current?.focus()
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
+  let placeholder = 'e.g. Aman, Riya'
+  let buttonLabel = 'Add'
+
+  if (isFull) {
+    placeholder = 'Group is full'
+    buttonLabel = 'Full'
+  } else if (isBusy) {
+    placeholder = 'Connecting to the API…'
+  } else if (isWorking) {
+    buttonLabel = 'Adding…'
+  }
+
+  const hint = isBusy
+    ? 'Waiting for the API before accepting new names.'
+    : `Unique names, up to ${MAX_NAME_LENGTH} characters`
+
   return (
-    <form className="member-form" onSubmit={handleSubmit} noValidate>
+    <form
+      className="member-form"
+      onSubmit={handleSubmit}
+      noValidate
+      aria-busy={isWorking}
+    >
       <label className="field-label" htmlFor={inputId}>
         Name
       </label>
@@ -55,36 +108,36 @@ export default function MemberForm({
         <input
           ref={nameInputRef}
           id={inputId}
-          className={`text-input${error ? ' text-input--error' : ''}`}
+          className={`text-input${displayError ? ' text-input--error' : ''}`}
           type="text"
           name="memberName"
           value={name}
           onChange={handleChange}
-          placeholder={isFull ? 'Group is full' : 'e.g. Aman, Riya'}
+          placeholder={placeholder}
           autoComplete="off"
           autoCapitalize="words"
           spellCheck="false"
           maxLength={MAX_NAME_LENGTH}
           required
-          disabled={isFull}
+          disabled={isDisabled}
           aria-required="true"
-          aria-invalid={Boolean(error)}
+          aria-invalid={Boolean(displayError)}
           aria-describedby={describedBy}
         />
 
         <button
           className="button button--primary"
           type="submit"
-          disabled={isFull}
+          disabled={isDisabled}
         >
-          {isFull ? null : <PlusIcon size={16} />}
-          {isFull ? 'Full' : 'Add'}
+          {isFull || isBusy || isWorking ? null : <PlusIcon size={16} />}
+          {buttonLabel}
         </button>
       </div>
 
       <div className="member-form__meta">
         <p id={hintId} className="field-hint">
-          Unique names, up to {MAX_NAME_LENGTH} characters
+          {hint}
         </p>
         <span className={`spots${isFull ? ' spots--full' : ''}`}>
           {isFull
@@ -93,14 +146,14 @@ export default function MemberForm({
         </span>
       </div>
 
-      {error ? (
+      {displayError ? (
         <p className="field-error" id={errorId} role="alert">
           <AlertCircleIcon size={15} />
-          <span>{error}</span>
+          <span>{displayError}</span>
         </p>
       ) : null}
 
-      {isFull && !error ? (
+      {isFull && !displayError ? (
         <p className="field-note">Remove a member to add another.</p>
       ) : null}
     </form>

@@ -212,6 +212,10 @@
   color: var(--color-positive);
 }
 
+.site-footer__note--loading svg {
+  color: var(--color-ink-subtle);
+}
+
 .site-footer__note--danger {
   color: var(--color-danger);
 }

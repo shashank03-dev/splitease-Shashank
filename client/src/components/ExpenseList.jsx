@@ -6,6 +6,7 @@ import { ReceiptIcon, TrashIcon } from './ui/Icons'
 export default function ExpenseList({
   expenses,
   canAddExpense,
+  deletingId = null,
   onDeleteExpense,
 }) {
   const headingId = useId()
@@ -14,11 +15,15 @@ export default function ExpenseList({
   const pendingFocusRef = useRef(null)
 
   /**
-   * Keep keyboard focus inside the expense log after a deletion. Focus moves
-   * to the next (or previous) row's delete button, or to the empty state when
-   * the last row is removed.
+   * Keep keyboard focus inside the expense log after a deletion. The removal
+   * button stays disabled until the API request settles, so wait until
+   * deletingId clears before moving focus.
    */
   useEffect(() => {
+    if (deletingId) {
+      return
+    }
+
     const target = pendingFocusRef.current
 
     if (!target) {
@@ -33,14 +38,23 @@ export default function ExpenseList({
     }
 
     deleteButtonRefs.current.get(target)?.focus()
-  }, [expenses])
+  }, [deletingId, expenses])
 
-  function handleDelete(expense, index) {
+  async function handleDelete(expense, index) {
+    if (deletingId) {
+      return
+    }
+
     const remaining = expenses.filter((entry) => entry.id !== expense.id)
     const nextExpense = remaining[index] ?? remaining[index - 1] ?? null
 
     pendingFocusRef.current = nextExpense ? nextExpense.id : 'empty'
-    onDeleteExpense(expense)
+
+    const result = await onDeleteExpense(expense)
+
+    if (!result?.ok) {
+      pendingFocusRef.current = null
+    }
   }
 
   return (
@@ -72,7 +86,10 @@ export default function ExpenseList({
         <ul className="expense-list__items" aria-label="Expense log">
           {expenses.map((expense, index) => {
             const formattedAmount = formatExpenseAmount(expense.amount)
-            const deleteLabel = `Delete ${expense.description}, ${formattedAmount}`
+            const isDeleting = deletingId === expense.id
+            const deleteLabel = isDeleting
+              ? `Deleting ${expense.description}, ${formattedAmount}`
+              : `Delete ${expense.description}, ${formattedAmount}`
 
             return (
               <li className="expense" key={expense.id}>
@@ -106,10 +123,14 @@ export default function ExpenseList({
                   type="button"
                   onClick={() => handleDelete(expense, index)}
                   aria-label={deleteLabel}
+                  aria-busy={isDeleting}
+                  disabled={Boolean(deletingId)}
                   title={deleteLabel}
                 >
                   <TrashIcon size={15} />
-                  <span className="expense__delete-label">Delete</span>
+                  <span className="expense__delete-label">
+                    {isDeleting ? 'Deleting' : 'Delete'}
+                  </span>
                 </button>
               </li>
             )

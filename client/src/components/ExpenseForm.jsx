@@ -9,12 +9,15 @@ import {
 export default function ExpenseForm({
   members,
   canAddExpense,
+  isBusy = false,
+  isAdding = false,
   onAddExpense,
 }) {
   const [description, setDescription] = useState('')
   const [amount, setAmount] = useState('')
   const [payerId, setPayerId] = useState('')
   const [error, setError] = useState(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const descriptionRef = useRef(null)
   const amountRef = useRef(null)
@@ -28,6 +31,8 @@ export default function ExpenseForm({
   const selectedPayerId = members.some((member) => member.id === payerId)
     ? payerId
     : ''
+  const isWorking = isAdding || isSubmitting
+  const isDisabled = !canAddExpense || isBusy || isWorking
 
   function clearError() {
     if (error) {
@@ -49,41 +54,73 @@ export default function ExpenseForm({
     descriptionRef.current?.focus()
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault()
 
-    if (!canAddExpense) {
+    if (isDisabled) {
       return
     }
 
-    const result = onAddExpense({
-      description,
-      amount,
-      payerId: selectedPayerId,
-    })
+    setIsSubmitting(true)
 
-    if (result.ok) {
-      setDescription('')
-      setAmount('')
-      setPayerId('')
-      setError(null)
-      descriptionRef.current?.focus()
-      return
+    try {
+      const result = await onAddExpense({
+        description,
+        amount,
+        payerId: selectedPayerId,
+      })
+
+      if (result?.ok) {
+        setDescription('')
+        setAmount('')
+        setPayerId('')
+        setError(null)
+        descriptionRef.current?.focus()
+        return
+      }
+
+      setError({
+        field: result?.field ?? 'form',
+        message: result?.message || 'Could not add this expense.',
+      })
+      focusField(result?.field)
+    } catch {
+      setError({
+        field: 'form',
+        message:
+          'Could not add this expense. Check the API connection and try again.',
+      })
+    } finally {
+      setIsSubmitting(false)
     }
-
-    setError({
-      field: result.field ?? 'form',
-      message: result.message,
-    })
-    focusField(result.field)
   }
 
   const errorIdFor = (field) => (error?.field === field ? errorId : undefined)
   const amountDescribedBy =
     [hintId, errorIdFor('amount')].filter(Boolean).join(' ') || undefined
 
+  let hint = 'Amounts support up to two decimals.'
+
+  if (isBusy) {
+    hint = 'Waiting for the API before accepting expenses.'
+  } else if (!canAddExpense) {
+    hint = 'Add two members to start logging expenses.'
+  }
+
+  let buttonLabel = 'Add'
+  if (!canAddExpense) {
+    buttonLabel = 'Locked'
+  } else if (isWorking) {
+    buttonLabel = 'Adding…'
+  }
+
   return (
-    <form className="expense-form" onSubmit={handleSubmit} noValidate>
+    <form
+      className="expense-form"
+      onSubmit={handleSubmit}
+      noValidate
+      aria-busy={isWorking}
+    >
       <div className="expense-form__grid">
         <div className="expense-form__field expense-form__field--description">
           <label className="field-label" htmlFor={descriptionId}>
@@ -106,7 +143,7 @@ export default function ExpenseForm({
             autoComplete="off"
             maxLength={MAX_EXPENSE_DESCRIPTION_LENGTH}
             required
-            disabled={!canAddExpense}
+            disabled={isDisabled}
             aria-required="true"
             aria-invalid={error?.field === 'description' || undefined}
             aria-describedby={errorIdFor('description')}
@@ -134,7 +171,7 @@ export default function ExpenseForm({
             inputMode="decimal"
             autoComplete="off"
             required
-            disabled={!canAddExpense}
+            disabled={isDisabled}
             aria-required="true"
             aria-invalid={error?.field === 'amount' || undefined}
             aria-describedby={amountDescribedBy}
@@ -159,7 +196,7 @@ export default function ExpenseForm({
                 clearError()
               }}
               required
-              disabled={!canAddExpense}
+              disabled={isDisabled}
               aria-required="true"
               aria-invalid={error?.field === 'payerId' || undefined}
               aria-describedby={errorIdFor('payerId')}
@@ -181,18 +218,16 @@ export default function ExpenseForm({
         <button
           className="button button--primary expense-form__submit"
           type="submit"
-          disabled={!canAddExpense}
+          disabled={isDisabled}
         >
-          {canAddExpense ? <PlusIcon size={16} /> : null}
-          {canAddExpense ? 'Add' : 'Locked'}
+          {canAddExpense && !isWorking ? <PlusIcon size={16} /> : null}
+          {buttonLabel}
         </button>
       </div>
 
       <div className="expense-form__meta">
         <p id={hintId} className="field-hint">
-          {canAddExpense
-            ? 'Amounts support up to two decimals.'
-            : 'Add two members to start logging expenses.'}
+          {hint}
         </p>
       </div>
 

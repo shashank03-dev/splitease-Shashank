@@ -4,6 +4,7 @@ import {
   calculateSettlements,
 } from '../utils/balanceUtils'
 import { formatExpenseAmount } from '../utils/expenseUtils'
+import DataState from './DataState'
 import ExpenseForm from './ExpenseForm'
 import ExpenseList from './ExpenseList'
 import ExpenseSummary from './ExpenseSummary'
@@ -14,49 +15,75 @@ export default function ExpenseManager({
   members,
   expenses,
   canAddExpense,
+  isLoading,
+  hasLoaded,
+  loadError,
+  isAdding,
+  deletingId,
+  isUnavailable,
   onAddExpense,
   onDeleteExpense,
+  onRetry,
 }) {
-  const [feedback, setFeedback] = useState('')
+  const [feedback, setFeedback] = useState(null)
   const summary = calculateGroupBalances(members, expenses)
   const settlements = calculateSettlements(summary.balances)
   const showSettlementPlan = summary.canSplit && summary.expenseCount > 0
   const showExpenseLog = members.length > 0 || expenses.length > 0
+  const showInitialLoading = isLoading && !hasLoaded
 
   useEffect(() => {
     if (!feedback) {
       return undefined
     }
 
-    const timer = window.setTimeout(() => setFeedback(''), 5000)
+    const timer = window.setTimeout(() => setFeedback(null), 5000)
 
     return () => window.clearTimeout(timer)
   }, [feedback])
 
-  function handleAddExpense(input) {
-    const result = onAddExpense(input)
+  async function handleAddExpense(input) {
+    const result = await onAddExpense(input)
 
     if (result.ok) {
-      setFeedback('')
+      setFeedback(null)
     }
 
     return result
   }
 
-  function handleDeleteExpense(expense) {
-    onDeleteExpense(expense.id)
-    setFeedback(
-      `Deleted “${expense.description}” (${formatExpenseAmount(
-        expense.amount,
-      )}).`,
-    )
+  async function handleDeleteExpense(expense) {
+    const result = await onDeleteExpense(expense.id)
+
+    if (result.ok) {
+      setFeedback({
+        tone: 'success',
+        message: `Deleted “${expense.description}” (${formatExpenseAmount(
+          expense.amount,
+        )}).`,
+      })
+    } else {
+      setFeedback({
+        tone: 'danger',
+        message:
+          result.message ||
+          'Could not delete this expense. Check the API and try again.',
+      })
+    }
+
+    return result
   }
+
+  let statusLabel = canAddExpense ? 'Open' : 'Locked'
+  if (showInitialLoading) statusLabel = 'Loading'
+  else if (isUnavailable) statusLabel = 'Offline'
 
   return (
     <section
       className="expense-card"
       id="expenses"
       aria-labelledby="expenses-heading"
+      aria-busy={showInitialLoading || isAdding || Boolean(deletingId)}
     >
       <div className="card-header">
         <div className="card-header__titles">
@@ -70,11 +97,17 @@ export default function ExpenseManager({
             aria-live="polite"
             aria-atomic="true"
           >
-            {expenses.length}
+            {hasLoaded ? expenses.length : '—'}
             <span> logged</span>
           </span>
-          <span className={`pill${canAddExpense ? ' pill--success' : ''}`}>
-            {canAddExpense ? 'Open' : 'Locked'}
+          <span
+            className={`pill${
+              canAddExpense && !showInitialLoading && !isUnavailable
+                ? ' pill--success'
+                : ''
+            }`}
+          >
+            {statusLabel}
           </span>
         </div>
       </div>
@@ -82,44 +115,70 @@ export default function ExpenseManager({
       <ExpenseForm
         members={members}
         canAddExpense={canAddExpense}
+        isBusy={showInitialLoading || isUnavailable}
+        isAdding={isAdding}
         onAddExpense={handleAddExpense}
       />
 
       <div className="card-divider" />
 
-      <ExpenseSummary summary={summary} />
-
-      {summary.canSplit ? (
+      {showInitialLoading ? (
+        <DataState
+          status="loading"
+          title="Loading expenses…"
+          message="Fetching your saved expense log from the SplitEasy API."
+        />
+      ) : isUnavailable ? (
+        <DataState
+          status="error"
+          title="Expenses could not be loaded."
+          message={loadError}
+          onRetry={onRetry}
+        />
+      ) : (
         <>
-          <div className="card-divider" />
-          <MemberBalances
-            balances={summary.balances}
-            memberCount={summary.memberCount}
-          />
+          <ExpenseSummary summary={summary} />
 
-          {showSettlementPlan ? (
+          {summary.canSplit ? (
             <>
               <div className="card-divider" />
-              <SettlementPlan settlements={settlements} />
+              <MemberBalances
+                balances={summary.balances}
+                memberCount={summary.memberCount}
+              />
+
+              {showSettlementPlan ? (
+                <>
+                  <div className="card-divider" />
+                  <SettlementPlan settlements={settlements} />
+                </>
+              ) : null}
             </>
           ) : null}
-        </>
-      ) : null}
 
-      {showExpenseLog ? (
-        <>
-          <div className="card-divider" />
-          <ExpenseList
-            expenses={expenses}
-            canAddExpense={canAddExpense}
-            onDeleteExpense={handleDeleteExpense}
-          />
-        </>
-      ) : null}
+          {showExpenseLog ? (
+            <>
+              <div className="card-divider" />
+              <ExpenseList
+                expenses={expenses}
+                canAddExpense={canAddExpense}
+                deletingId={deletingId}
+                onDeleteExpense={handleDeleteExpense}
+              />
+            </>
+          ) : null}
 
-      <p className="action-status" role="status" aria-live="polite">
-        {feedback}
-      </p>
+          <p
+            className={`action-status${
+              feedback?.tone === 'danger' ? ' action-status--danger' : ''
+            }`}
+            role={feedback?.tone === 'danger' ? 'alert' : 'status'}
+            aria-live="polite"
+          >
+            {feedback?.message ?? ''}
+          </p>
+        </>
+      )}
     </section>
   )
 }
