@@ -4,13 +4,13 @@
   "private": true,
   "description": "SplitEasy REST API built with Express, Mongoose and MongoDB Atlas.",
   "type": "module",
-  "main": "src/server.js",
+  "main": "src/start.js",
   "engines": {
     "node": ">=20.19.0"
   },
   "scripts": {
-    "dev": "node --watch src/server.js",
-    "start": "node src/server.js"
+    "dev": "node --watch src/start.js",
+    "start": "node src/start.js"
   },
   "dependencies": {
     "cors": "^2.8.6",

@@ -1,6 +1,7 @@
 import cors from 'cors'
 import express from 'express'
 import { env } from './config/env.js'
+import { ensureDatabase } from './middleware/ensureDatabase.js'
 import { errorHandler } from './middleware/errorHandler.js'
 import { notFound } from './middleware/notFound.js'
 import expenseRoutes from './routes/expense.routes.js'
@@ -28,9 +29,11 @@ const corsOptions = {
   allowedHeaders: ['Content-Type', 'Authorization'],
 }
 
-// Order matters: CORS and body parsing run before any route.
+// Order matters: CORS and body parsing run before any route, and the database
+// check runs before any handler that reads or writes data.
 app.use(cors(corsOptions))
 app.use(express.json({ limit: '10kb' }))
+app.use(ensureDatabase)
 
 app.get('/', (req, res) => {
   res.status(200).json({
